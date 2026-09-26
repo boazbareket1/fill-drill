@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12161f">
+<title>Fill Drill – Drum Fill Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Secular+One&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+html,body{margin:0}
+img{max-width:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{
+  color-scheme: dark;
+  --bg:#12161f; --panel:#1a1f2b; --panel2:#222938; --pad:#262d3c; --pad2:#2f3749; --line:#343c50;
+  --text:#e9ecf3; --muted:#8e97ab; --brass:#dcab4a; --brass-ink:#1c1606;
+  --paper:#f6f4ee; --ink:#1b1e26; --ink-soft:#8b8f99;
+  --r:#ff6b5e; --l:#5ab0ff;
+  --c-hh:#f5d76e; --c-crash:#e8964a; --c-ride:#c9b89a; --c-t1:#6fe0d8; --c-t2:#3fa0e8;
+  --c-ft:#6b78f0; --c-sn:#eeece6; --c-kick:#d6457e; --warn:#ff5a4f;
+  --cell:34px;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:"Rubik",system-ui,sans-serif;font-size:15px}
+.app{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:18px 60px;display:flex;flex-direction:column;gap:14px}
+h1{font-family:"Secular One","Rubik",sans-serif;font-weight:400;font-size:28px;margin:0;letter-spacing:.2px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.brand{text-align:right;font-size:30px}
+.brand .tag{font-family:"Rubik",sans-serif;font-size:.5em;font-weight:500;color:var(--muted);letter-spacing:.3px;vertical-align:.35em}
+.he-sub{font-size:14px;color:var(--brass);margin-top:2px}
+.head p{margin:4px 0 0;color:var(--muted);font-size:14px;max-width:60ch}
+.clock{display:flex;gap:16px;font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--muted)}
+.clock b{color:var(--text);font-size:16px;display:block}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* transport */
+.transport{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.play{width:58px;height:58px;border-radius:50%;border:0;background:var(--brass);color:var(--brass-ink);display:grid;place-items:center;cursor:pointer;flex:none}
+.play svg{width:24px;height:24px}
+.play:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.tempo{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bpm{font-family:"JetBrains Mono",monospace;font-size:34px;font-weight:700;min-width:3ch;text-align:center;line-height:1}
+.bpm small{display:block;font-size:10px;color:var(--muted);letter-spacing:1.5px;font-weight:500;margin-top:3px}
+.ibtn{min-width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:500;cursor:pointer;padding:0 10px}
+.ibtn:hover{border-color:var(--muted)}
+.ibtn.on{background:var(--brass);color:var(--brass-ink);border-color:var(--brass)}
+input[type=range]{accent-color:var(--brass);width:140px}
+.status{margin-inline-start:auto;display:flex;align-items:center;gap:12px}
+.beats{display:flex;gap:6px;direction:ltr}
+.beats i{width:14px;height:14px;border-radius:50%;background:var(--pad2);transition:background .05s}
+.beats i.on{background:var(--brass)}
+.beats i.on.one{background:#fff}
+.seg{font-size:13px;color:var(--muted);min-width:92px;text-align:center;padding:5px 10px;border-radius:999px;border:1px solid var(--line)}
+.seg.fill{color:var(--brass-ink);background:var(--brass);border-color:var(--brass)}
+.seg.groove{color:var(--text);background:var(--pad2)}
+.count{font-family:"JetBrains Mono",monospace;font-size:26px;font-weight:700;width:2ch;text-align:center}
+
+/* panels */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card h2{font-size:12px;letter-spacing:1.6px;color:var(--muted);font-weight:500;margin:0 0 10px;text-transform:uppercase}
+.notation{direction:ltr;background:var(--paper);border-radius:10px;overflow-x:auto;padding:4px 0}
+.notation svg{display:block}
+.sticking{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;direction:ltr;justify-content:flex-end}
+.sticking span{font-family:"JetBrains Mono",monospace;font-size:14px;letter-spacing:2px;color:var(--text)}
+.sticking em{font-style:normal;color:var(--muted)}
+
+.tools{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.group{display:flex;gap:4px;background:var(--panel2);padding:4px;border-radius:12px;border:1px solid var(--line)}
+.group button{border:0;background:transparent;color:var(--text);font:inherit;font-weight:500;border-radius:8px;padding:7px 12px;cursor:pointer;min-width:40px}
+.group button.on{background:var(--brass);color:var(--brass-ink)}
+.group button .k{font-family:"JetBrains Mono",monospace;font-weight:700}
+.lbl{font-size:12px;color:var(--muted)}
+.tools .sp{flex:1}
+.act{border:1px solid var(--line);background:transparent;color:var(--text);font:inherit;font-size:14px;border-radius:10px;padding:8px 12px;cursor:pointer}
+.act:hover{background:var(--panel2)}
+.act.warn{border-color:var(--warn);color:var(--warn)}
+
+/* grid */
+.gridwrap{overflow-x:auto;direction:ltr;padding-bottom:6px}
+.grid{display:flex;flex-direction:column;gap:4px;width:max-content}
+.row{display:flex;gap:3px;align-items:center}
+.rlabel{position:sticky;left:0;z-index:2;width:112px;flex:none;height:var(--cell);display:flex;align-items:center;gap:8px;padding:0 8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:13px;cursor:pointer;direction:rtl;justify-content:flex-start;color:var(--text);font-family:inherit}
+.rlabel .dot{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.rlabel .m{margin-inline-start:auto;font-size:10px;color:var(--muted);font-family:"JetBrains Mono",monospace}
+.rlabel.muted{opacity:.45}
+.rlabel.muted .m{color:var(--warn)}
+.hrow .rlabel{background:transparent;border-color:transparent;cursor:default;color:var(--muted);font-size:11px}
+.cell{width:var(--cell);height:var(--cell);flex:none;border-radius:7px;background:var(--pad);display:grid;place-items:center;font-family:"JetBrains Mono",monospace;font-weight:700;font-size:14px;cursor:pointer;position:relative;user-select:none;-webkit-user-select:none;transition:transform .06s}
+.cell.beat{background:var(--pad2)}
+.cell.gap{margin-left:7px}
+.cell.bar{margin-left:16px}
+.cell:hover{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--c) 70%,transparent)}
+.cell.on{background:var(--c);color:#10131a}
+.cell.acc::before{content:">";position:absolute;top:-1px;right:3px;font-size:10px;line-height:1}
+.cell.ph{box-shadow:inset 0 0 0 2px var(--brass)}
+.cell.on.ph{transform:scale(1.08);box-shadow:0 0 0 2px #fff}
+.hcell{width:var(--cell);flex:none;text-align:center;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted)}
+.hcell.b{color:var(--brass);font-weight:700;font-size:14px}
+.hcell.gap{margin-left:7px}.hcell.bar{margin-left:16px}
+.hcell.ph{color:#fff}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);margin-top:10px}
+.stats b{color:var(--text);font-family:"JetBrains Mono",monospace}
+.stats .R{color:var(--r)}.stats .L{color:var(--l)}
+
+/* settings */
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.field{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.field:first-of-type{border-top:0}
+.field select,.field input[type=number],.field input[type=text]{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;font-size:14px}
+.field input[type=number]{width:70px}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.5;margin:6px 0 0}
+.sw{position:relative;width:42px;height:24px;flex:none}
+.sw input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;background:var(--pad2);border-radius:999px;transition:.15s;border:1px solid var(--line)}
+.sw span::after{content:"";position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:.15s}
+.sw input:checked+span{background:var(--brass);border-color:var(--brass)}
+.sw input:checked+span::after{right:21px;background:var(--brass-ink)}
+.sw input:focus-visible+span{outline:2px solid var(--brass);outline-offset:2px}
+.lib{display:flex;flex-direction:column;gap:6px}
+.lib .item{display:flex;align-items:center;gap:8px;background:var(--panel2);border-radius:9px;padding:6px 6px 6px 10px}
+.lib .item .n{flex:1;font-size:14px;cursor:pointer;padding-inline-start:4px}
+.lib .item .n:hover{color:var(--brass)}
+.lib .item small{color:var(--muted);font-size:11px}
+.lib .x{background:transparent;border:0;color:var(--muted);cursor:pointer;font:inherit;font-size:12px;padding:4px 8px;border-radius:6px}
+.lib .x.sure{color:#fff;background:var(--warn)}
+.saverow{display:flex;gap:6px;margin-top:8px}
+.saverow input{flex:1;min-width:0}
+.sub{font-size:12px;color:var(--muted);margin:12px 0 6px}
+.keys{font-size:12px;color:var(--muted)}
+kbd{font-family:"JetBrains Mono",monospace;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:11px}
+.gridwrap{position:relative}
+.cell{touch-action:manipulation}
+.rlabel .full{white-space:nowrap}
+.rlabel .short{display:none;white-space:nowrap}
+.scroller{display:flex;align-items:center;gap:8px;margin-top:8px;direction:ltr}
+.scroller input[type=range]{flex:1;width:auto;height:34px;margin:0}
+.scroller .lbl{direction:rtl;white-space:nowrap}
+.follow{font-size:13px}
+.modetabs{display:flex;gap:4px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:12px;width:max-content;max-width:100%}
+.modetabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:500;font-size:15px;padding:8px 16px;border-radius:8px;cursor:pointer}
+.modetabs button.on{background:var(--text);color:var(--bg)}
+.modenote{font-size:13px;color:var(--muted);margin:-4px 0 10px}
+.libtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--text);font:inherit;font-size:13px;border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip.on{background:var(--brass);border-color:var(--brass);color:var(--brass-ink)}
+.chip.tab{font-size:14px;font-weight:500}
+.chip.tab.on{background:var(--text);border-color:var(--text);color:var(--bg)}
+.libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.fillcard{min-width:0;text-align:start;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;color:var(--text);font:inherit;display:flex;flex-direction:column;gap:4px}
+.fillcard:hover{border-color:var(--brass)}
+.fillcard .t{font-weight:500;font-size:14.5px}
+.fillcard .meta{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.fillcard .lv{display:inline-flex;gap:2px}
+.fillcard .lv i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.fillcard .lv i.f{background:var(--brass)}
+.fillcard .st{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:1px;color:var(--muted);direction:ltr;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fillcard .row2{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.skipbar{display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:6px}
+.skipbtn{width:44px;height:44px;flex:none;border-radius:10px;border:1px solid var(--line);background:var(--pad);color:var(--text);font:inherit;font-size:26px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.skipbtn:hover{border-color:var(--brass)}
+.skipbtn:active{background:var(--brass);color:var(--brass-ink)}
+.skipname{flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;gap:2px}
+.skipname small{font-size:11px;color:var(--muted)}
+.skipname span{font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[hidden]{display:none!important}
+.libsec{grid-column:1/-1}
+[hidden]{display:none!important}
+@media (max-width:560px){.libgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fillcard{padding:8px 10px}.fillcard .t{font-size:13.5px}.fillcard .st{font-size:10px}}
+@media (max-width:560px){
+  :root{--cell:32px}
+  h1{font-size:23px}
+  .head p{display:none}
+  .transport{gap:8px;padding:8px 10px}
+  .play{width:48px;height:48px}
+  .bpm{font-size:26px}
+  .ibtn{min-width:34px;height:34px;padding:0 8px}
+  #bpmRange{order:5;flex:1 1 120px;width:auto}
+  .status{order:4;margin-inline-start:0;gap:8px}
+  .seg{min-width:70px;padding:4px 8px}
+  .count{font-size:22px}
+  .rlabel{width:66px;font-size:12px;padding:0 6px;gap:5px}
+  .rlabel .m,.rlabel .full{display:none}
+  .rlabel .short{display:inline}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="app" dir="rtl">
+  <header class="head">
+    <div>
+      <h1 dir="ltr" class="brand">Fill Drill <span class="tag">– Drum Fill Trainer</span></h1>
+      <div class="he-sub">מאמן מעברים בתופים</div>
+      <p>בנו ביט ראשי ומעבר, או טענו אותם מהספרייה. בחרו יד (R / L), הקישו על תא כדי לשבץ מכה, קבעו טמפו ולחצו נגן. המבנה החוזר: ביט → מעבר → קראש על 1.</p>
+    </div>
+    <div class="clock">
+      <div><b id="tElapsed">00:00</b>זמן תרגול</div>
+      <div><b id="tLoops">0</b>סבבים</div>
+    </div>
+  </header>
+
+  <section class="transport" aria-label="בקרת נגינה">
+    <button class="play" id="play" aria-label="נגן"><svg viewBox="0 0 24 24" id="playIcon"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg></button>
+    <div class="tempo">
+      <button class="ibtn" id="bpmDown" aria-label="הורד טמפו">−</button>
+      <div class="bpm mono" aria-live="polite"><span id="bpmVal">70</span><small>BPM</small></div>
+      <button class="ibtn" id="bpmUp" aria-label="העלה טמפו">+</button>
+      <button class="ibtn" id="tap">טאפ</button>
+      <button class="ibtn on" id="metroBtn" aria-pressed="true" title="מטרונום">
+        <svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-4px"><path d="M9 3h6l4 18H5z M12 17 L17 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <input type="range" id="bpmRange" min="30" max="220" value="70" aria-label="טמפו">
+    <div class="status">
+      <span class="seg" id="segPill">עצור</span>
+      <div class="beats" id="beats"><i></i><i></i><i></i><i></i></div>
+      <span class="count" id="countTxt">–</span>
+    </div>
+  </section>
+
+  <section class="card" id="editor">
+    <div class="modetabs" role="tablist">
+      <button id="tabFill" role="tab">המעבר</button>
+      <button id="tabGroove" role="tab">הביט הראשי</button>
+    </div>
+    <p class="modenote" id="modeNote"></p>
+    <div class="notation" id="notation"></div>
+    <div class="sticking" id="stickLine"></div>
+  </section>
+
+  <section class="card">
+    <div class="tools">
+      <div>
+        <div class="lbl">יד</div>
+        <div class="group" id="brush">
+          <button data-b="R"><span class="k">R</span> ימין</button>
+          <button data-b="L"><span class="k">L</span> שמאל</button>
+          <button data-b="auto" title="R על ספירות זוגיות, L על אי-זוגיות">לסירוגין</button>
+          <button data-b="erase">מחק</button>
+        </div>
+      </div>
+      <div>
+        <div class="lbl">הדגשה</div>
+        <div class="group"><button id="accBtn" aria-pressed="false"><span class="k">&gt;</span> אקסנט</button></div>
+      </div>
+      <div id="barsBox">
+        <div class="lbl">תיבות מעבר</div>
+        <div class="group" id="barsSel">
+          <button data-n="1">1</button><button data-n="2">2</button><button data-n="4">4</button>
+        </div>
+      </div>
+      <div class="sp"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-self:flex-end">
+        <button class="act" id="mirrorBtn" title="החלפת כל ה-R ב-L ולהפך">החלף ידיים</button>
+        <button class="act" id="altBtn" title="מסדר סטיקינג R L R L לפי סדר המכות">סטיקינג לסירוגין</button>
+        <button class="act" id="copyBtn">שכפל תיבה 1</button>
+        <button class="act warn" id="clearBtn">נקה</button>
+      </div>
+    </div>
+    <div class="gridwrap" id="gridwrap" style="margin-top:12px"><div class="grid" id="grid"></div></div>
+    <div class="scroller" id="scroller">
+      <input type="range" id="gridScroll" min="0" max="1000" value="0" aria-label="גלילת הגריד">
+      <span class="lbl">גלילה</span>
+      <button class="chip follow on" id="followBtn" aria-pressed="true">מעקב אוטומטי</button>
+    </div>
+    <div class="skipbar" id="skipbar">
+      <button class="skipbtn" id="skipPrev" aria-label="הקודם"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="skipname"><small id="skipKind">מעבר</small><span id="skipName">–</span></div>
+      <button class="skipbtn" id="skipNext" aria-label="הבא"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="skipbtn rnd" id="skipRnd" aria-label="אקראי" title="אקראי">
+        <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.6" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>
+      </button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <p class="hint">הקשה על משבצת מלאה מחליפה בין R ל־L, והקשה נוספת מוחקת את המכה. הכלי "יד" קובע באיזו יד מתחילה מכה חדשה.</p>
+  </section>
+
+  <section class="card" id="library">
+    <h2>ספריית תרגול</h2>
+    <div class="libtabs" id="libTabs">
+      <button class="chip tab on" data-tab="fills">מעברים</button>
+      <button class="chip tab" data-tab="grooves">ביטים ראשיים</button>
+      <button class="chip tab" data-tab="saved">שמורים שלי</button>
+    </div>
+    <div class="libtabs" id="levelChips">
+      <button class="chip on" data-lv="0">הכול</button>
+      <button class="chip" data-lv="1">מתחילים</button>
+      <button class="chip" data-lv="2">בינוני</button>
+      <button class="chip" data-lv="3">מתקדם</button>
+    </div>
+    <div class="libgrid" id="libGrid"></div>
+    <div class="saverow" id="saveRow" style="margin-top:12px">
+      <input type="text" id="saveName" placeholder="שם לשמירה" maxlength="40" style="background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit">
+      <button class="act" id="saveBtn">שמור את מה שבעריכה</button>
+    </div>
+    <p class="hint">מעבר קצר (פעמה אחת או שתיים) נטען יחד עם הביט הראשי הנוכחי בתחילת התיבה, כך שמתרגלים את הכניסה אליו.</p>
+  </section>
+
+  <section class="settings">
+    <div class="card">
+      <h2>מבנה הסבב</h2>
+      <div class="field"><span>תיבות ביט לפני המעבר</span>
+        <select id="grooveBars"><option value="0">ללא</option><option value="1">1</option><option value="3">3</option><option value="7">7</option></select></div>
+      <div class="field"><span>נחיתה: קראש + בס על 1</span><label class="sw"><input type="checkbox" id="land" checked><span></span></label></div>
+      <p class="hint">הביט הראשי נערך בלשונית "הביט הראשי" למעלה. זה הרגע שבו רוב המעברים מתפרקים: היציאה מהביט והחזרה לפעמה 1.</p>
+    </div>
+    <div class="card">
+      <h2>מטרונום ושמיעה</h2>
+      <div class="field"><span>קליק</span>
+        <select id="subdiv"><option value="4">רבעים</option><option value="8">שמיניות</option><option value="16">שש-עשריות</option><option value="2">2 ו-4 בלבד</option></select></div>
+      <div class="field"><span>ספירה לפני התחלה</span><label class="sw"><input type="checkbox" id="countIn" checked><span></span></label></div>
+      <div class="field"><span>מה נשמע</span>
+        <select id="listen"><option value="full">הכול</option><option value="alt">סבב כן, סבב לא</option><option value="metro">מטרונום בלבד</option></select></div>
+      <div class="field"><span>עוצמת תופים</span><input type="range" id="volPat" min="0" max="100" value="85" aria-label="עוצמת תופים"></div>
+      <div class="field"><span>עוצמת מטרונום</span><input type="range" id="volMet" min="0" max="100" value="60" aria-label="עוצמת מטרונום"></div>
+      <p class="hint">"סבב כן, סבב לא": סבב אחד שומעים את המעבר, ובסבב הבא מנגנים אותו לבד מול הקליק.</p>
+    </div>
+    <div class="card">
+      <h2>מאמן מהירות</h2>
+      <div class="field"><span>הפעלה</span><label class="sw"><input type="checkbox" id="trOn"><span></span></label></div>
+      <div class="field"><span>הוספה של BPM</span><input type="number" id="trInc" min="1" max="20" value="4"></div>
+      <div class="field"><span>כל כמה סבבים</span><input type="number" id="trEvery" min="1" max="16" value="2"></div>
+      <div class="field"><span>עד טמפו</span><input type="number" id="trMax" min="40" max="240" value="120"></div>
+      <p class="hint keys" style="margin-top:10px"><kbd>רווח</kbd> נגן/עצור · <kbd>↑</kbd><kbd>↓</kbd> טמפו · <kbd>R</kbd> <kbd>L</kbd> יד · <kbd>A</kbd> אקסנט</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+const INST = [
+  {id:'hh',    name:'היי-האט',  short:'האט',   color:'var(--c-hh)',    pos:9,  x:true,  hex:'#b8900f'},
+  {id:'crash', name:'קראש',     short:'קראש',  color:'var(--c-crash)', pos:10, x:true,  hex:'#c0661a'},
+  {id:'ride',  name:'רייד',     short:'רייד',  color:'var(--c-ride)',  pos:8,  x:true,  hex:'#8a7550'},
+  {id:'t1',    name:'טום 1',    short:'טום 1', color:'var(--c-t1)',    pos:7,  x:false, hex:'#139c93'},
+  {id:'t2',    name:'טום 2',    short:'טום 2', color:'var(--c-t2)',    pos:6,  x:false, hex:'#1a6fc0'},
+  {id:'ft',    name:'טום רצפה', short:'רצפה',  color:'var(--c-ft)',    pos:3,  x:false, hex:'#3a47c4'},
+  {id:'sn',    name:'סנר',      short:'סנר',   color:'var(--c-sn)',    pos:5,  x:false, hex:'#1b1e26'},
+  {id:'kick',  name:'בס (קיק)', short:'בס',    color:'var(--c-kick)',  pos:1,  x:false, hex:'#b02a60'},
+];
+const MAXSTEPS = 64;
+const $ = s => document.querySelector(s);
+const emptyGrid = () => Object.fromEntries(INST.map(i => [i.id, Array(MAXSTEPS).fill(null)]));
+const COUNTS=['1','e','&','a'];
+const LEVELS=['','מתחילים','בינוני','מתקדם'];
+
+/* ---------- pattern text format ----------
+   One token per 16th. "-" = rest. Parts joined with "+".
+   Letter: s=snare a=tom1 b=tom2 f=floor k=kick h=hihat c=crash r=ride, then hand R/L. ">" = accent. */
+const CODE={h:'hh',c:'crash',r:'ride',a:'t1',b:'t2',f:'ft',s:'sn',k:'kick'};
+function parseSeq(str){
+  return str.trim().split(/\s+/).map(tok => tok==='-' ? [] : tok.split('+').map(p => {
+    let a=false; if(p[0]==='>'){ a=true; p=p.slice(1); }
+    const id=CODE[p[0]]; return {id, h: id==='kick' ? 'K' : (p[1]||'R'), a};
+  }));
+}
+function colLetter(col){ const hands=[...new Set(col.filter(n=>n.h!=='K').map(n=>n.h))]; return col.length ? (hands.length===2?'B':(hands[0]||'K')) : '-'; }
+
+/* ---------- library data ---------- */
+const shiftAcc = () => Array.from({length:16},(_,s)=>(s%3===0?'>':'')+'s'+(s%2?'L':'R')).join(' ');
+const FILLS = [
+  {n:'4 שש-עשריות בסנר', l:1, bars:1, from:12, seq:'sR sL sR sL'},
+  {n:'סנר ואז טום רצפה', l:1, bars:1, from:12, seq:'sR sL fR fL'},
+  {n:'טום 1 ואז טום רצפה', l:1, bars:1, from:12, seq:'aR aL fR fL'},
+  {n:'8 שש-עשריות בסנר', l:1, bars:1, from:8, seq:'>sR sL sR sL >sR sL sR sL'},
+  {n:'חצי תיבה: סנר ואז טומים', l:1, bars:1, from:8, seq:'sR sL sR sL aR aL fR fL'},
+  {n:'שמיניות על הטומים', l:1, bars:1, from:8, seq:'aR - aL - bR - fL -'},
+  {n:'טום רצפה ובס', l:1, bars:1, from:8, seq:'fR - k - fR - k -'},
+  {n:'רבעים מסביב לתופים', l:1, bars:1, from:0, seq:'>sR - - - >aR - - - >bR - - - >fR - - -'},
+  {n:'שמיניות מסביב לתופים', l:1, bars:1, from:0, seq:'sR - sL - aR - aL - bR - bL - fR - fL -'},
+  {n:'סיבוב מלא על התופים', l:1, bars:1, from:0, seq:'>sR sL sR sL >aR aL aR aL >bR bL bR bL >fR fL fR fL'},
+  {n:'2 תיבות: ביט ומעבר קצר', l:1, bars:2, from:24, seq:'sR sL sR sL aR aL fR fL'},
+
+  {n:'RLRK L (מהסרטון)', l:2, bars:1, from:0, seq:'bR bL fR k sL - bR bL fR fL fR k sL - - -'},
+  {n:'טריפלט RLK', l:2, bars:1, from:8, seq:'sR sL k aR aL k fR fL'},
+  {n:'שמינית ושתי שש-עשריות', l:2, bars:1, from:8, seq:'sR - sL sR aL - aR aL'},
+  {n:'שתי שש-עשריות ושמינית', l:2, bars:1, from:8, seq:'sR sL sR - fL fR fL -'},
+  {n:'בס בין הידיים RLKK', l:2, bars:1, from:8, seq:'sR sL k k aR aL k k'},
+  {n:'ירידה על הטומים', l:2, bars:1, from:8, seq:'aR aL bR bL fR fL fR fL'},
+  {n:'סיקס סטרוק רול', l:2, bars:1, from:10, seq:'>sR sL sL sR sR >fL'},
+  {n:'דאבלים RRLL', l:2, bars:1, from:0, seq:'>sR sR sL sL >sR sR sL sL >aR aR bL bL >fR fR fL fL'},
+  {n:'פרדידל מסביב', l:2, bars:1, from:0, seq:'>aR sL aR aR >sL bR sL sL >bR sL bR bR >sL fR sL sL'},
+  {n:'סנר עם אקסנט כל 3', l:2, bars:1, from:0, seq:shiftAcc()},
+  {n:'2 תיבות: סנר שנבנה', l:2, bars:2, from:16, seq:'>sR - sL - >sR - sL - >sR sL sR sL >sR sL sR sL'},
+
+  {n:'RLK בקבוצות של 3', l:3, bars:1, from:0, seq:'>sR sL k >aR sL k >bR sL k >fR sL k >sR sL k >fR'},
+  {n:'RLRKK בחמישיות', l:3, bars:1, from:0, seq:'>sR aL bR k k >sR bL fR k k >aR bL fR k k >fR'},
+  {n:'סיקס סטרוק מסביב', l:3, bars:1, from:0, seq:'>sR sL sL aR aR >fL >sR sL sL bR bR >fL >sR sL sL >fR'},
+  {n:'פרדידל-דידל RLRRLL', l:3, bars:1, from:0, seq:'>aR sL aR aR sL sL >bR sL bR bR sL sL >fR sL fR fR'},
+  {n:'אקסנטים 3-3-2 בקראש', l:3, bars:1, from:0, seq:'>cR+k sL sL >cR+k sL sL >cR+k sL >cR+k sL sL >cR+k sL sL >cR+k sL'},
+  {n:'בס כפול בין הטומים', l:3, bars:1, from:0, seq:'sR sL k k aR aL k k bR bL k k >fR >fL k k'},
+  {n:'2 תיבות: סיבוב כפול', l:3, bars:2, from:0, seq:'>sR sL sR sL >aR aL aR aL >bR bL bR bL >fR fL fR fL >sR sL k >aR aL k >bR bL k >fR fL k >sR sL >fR fL'},
+];
+const GROOVES = [
+  {n:'רוק בסיסי', seq:'>hR+k - hR - >hR+sL - hR - >hR+k - hR+k - >hR+sL - hR -'},
+  {n:'רוק, היי-האט בשש-עשריות', seq:'>hR+k hR hR hR >hR+sL hR hR hR >hR+k hR hR+k hR >hR+sL hR hR hR'},
+  {n:'חצי טמפו', seq:'>hR+k - hR k hR - hR - >hR+sL - hR+k - hR - hR -'},
+  {n:'בס מסונכרן', seq:'>hR+k - hR - >hR+sL - hR k hR - hR+k - >hR+sL - hR -'},
+  {n:'ארבע על הרצפה', seq:'k - >hR - k+sL - >hR - k - >hR - k+sL - >hR -'},
+  {n:'רייד בשמיניות', seq:'>rR+k - rR - >rR+sL - rR - >rR+k - rR+k - >rR+sL - rR -'},
+  {n:'פאנק בסיסי', seq:'>hR+k hR hR hR >hR+sL hR hR+k hR+sL hR hR+k hR hR >hR+sL hR hR hR'},
+  {n:'מוטאון', seq:'hR+sL+k - hR - hR+sL - hR - hR+sL+k - hR - hR+sL - hR -'},
+  {n:'טום רצפה (טרייבל)', seq:'>fR+k - fR - >fR+sL - fR - >fR+k - fR+k - >fR+sL - fR -'},
+  {n:'רגאיי One Drop', seq:'hR - hR - hR - hR - hR+k+>sL - hR - hR - hR -'},
+];
+function gridFromSeq(seq, offset=0, into=emptyGrid()){
+  parseSeq(seq).forEach((col,j)=>col.forEach(n=>{ if(offset+j<MAXSTEPS) into[n.id][offset+j]={h:n.h,a:n.a}; }));
+  return into;
+}
+function buildFill(f){
+  const g=emptyGrid();
+  for(let s=0;s<f.from;s++) for(const i of INST){ const c=S.groove[i.id][s%16]; if(c) g[i.id][s]={...c}; }
+  return gridFromSeq(f.seq, f.from, g);
+}
+function lenLabel(f){ const n=f.bars*16-f.from; return n<=4?'פעמה אחת':n===6?'פעמה וחצי':n<=8?'2 פעמות':n<=16?'תיבה':'2 תיבות'; }
+function stickPreview(seq){ const cols=parseSeq(seq); let o=''; cols.forEach((c,j)=>{ if(j && j%4===0) o+=' '; o+=colLetter(c); }); return o; }
+
+/* ---------- state ---------- */
+const S = {
+  bpm:70, bars:1, grid:emptyGrid(), groove:gridFromSeq(GROOVES[0].seq), edit:'fill',
+  brush:'auto', accent:false, metro:true, subdiv:4,
+  countIn:true, grooveBars:3, land:true, listen:'full',
+  trOn:false, trInc:4, trEvery:2, trMax:120, volPat:85, volMet:60, mute:{}, follow:true
+};
+const store = {
+  get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+let saveT;
+function persist(){ clearTimeout(saveT); saveT=setTimeout(()=>store.set('dft.state', S), 250); }
+(function load(){
+  const st = store.get('dft.state', null);
+  if(st && st.grid){
+    delete st.grooveStyle; Object.assign(S, st);
+    for(const key of ['grid','groove']){ if(!S[key]) S[key]=emptyGrid(); for(const i of INST) if(!S[key][i.id]) S[key][i.id]=Array(MAXSTEPS).fill(null); }
+    if(!st.groove) S.groove=gridFromSeq(GROOVES[0].seq);
+  } else { const f0=FILLS.find(f=>f.n.startsWith('RLRK')); S.grid = buildFill(f0); S.fillIdx=FILLS.indexOf(f0); S.grooveIdx=0; }
+})();
+let saved = store.get('dft.saved', []);
+const G  = () => S.edit==='groove' ? S.groove : S.grid;
+const NB = () => S.edit==='groove' ? 1 : S.bars;
+
+/* ---------- audio ---------- */
+let ctx, master, patBus, metBus, noiseBuf;
+function initAudio(){
+  if(ctx) return;
+  ctx = new (window.AudioContext||window.webkitAudioContext)();
+  master = ctx.createDynamicsCompressor(); master.threshold.value=-10; master.ratio.value=4; master.connect(ctx.destination);
+  patBus = ctx.createGain(); patBus.connect(master);
+  metBus = ctx.createGain(); metBus.connect(master);
+  setVolumes();
+  noiseBuf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
+  const d = noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+}
+function setVolumes(){ if(!ctx) return; patBus.gain.value = (S.volPat/100)**1.5*1.1; metBus.gain.value=(S.volMet/100)**1.5*0.9; }
+function env(t, peak, dec, attack=0.002){ const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+attack); g.gain.exponentialRampToValueAtTime(0.0001,t+dec); return g; }
+function noise(t, dur){ const n=ctx.createBufferSource(); n.buffer=noiseBuf; n.start(t, Math.random()); n.stop(t+dur); return n; }
+function osc(type,f,t,dur){ const o=ctx.createOscillator(); o.type=type; o.frequency.setValueAtTime(f,t); o.start(t); o.stop(t+dur); return o; }
+const SYN = {
+  kick(t,v){ const o=osc('sine',160,t,.5); o.frequency.exponentialRampToValueAtTime(42,t+.13); const g=env(t,v*1.2,.42); o.connect(g).connect(patBus);
+    const c=osc('triangle',900,t,.02); const cg=env(t,v*.25,.018,.001); c.connect(cg).connect(patBus); },
+  sn(t,v){ const n=noise(t,.25); const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1400; const g=env(t,v*.75,.2); n.connect(hp).connect(g).connect(patBus);
+    const o=osc('triangle',210,t,.15); o.frequency.exponentialRampToValueAtTime(160,t+.1); const og=env(t,v*.55,.11); o.connect(og).connect(patBus); },
+  tom(t,v,f){ const o=osc('sine',f*1.6,t,.6); o.frequency.exponentialRampToValueAtTime(f,t+.07); const g=env(t,v*.95,.5); o.connect(g).connect(patBus);
+    const n=noise(t,.05); const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=f*4; const ng=env(t,v*.18,.04); n.connect(bp).connect(ng).connect(patBus); },
+  t1(t,v){ SYN.tom(t,v,210); }, t2(t,v){ SYN.tom(t,v,155); }, ft(t,v){ SYN.tom(t,v,100); },
+  hh(t,v){ const n=noise(t,.1); const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7500; const g=env(t,v*.4,.06); n.connect(hp).connect(g).connect(patBus); },
+  crash(t,v){ const n=noise(t,1.8); const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=4200; const g=env(t,v*.5,1.6,.004); n.connect(hp).connect(g).connect(patBus); },
+  ride(t,v){ const n=noise(t,.7); const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=8000; const g=env(t,v*.22,.55); n.connect(hp).connect(g).connect(patBus);
+    [3120,4410].forEach(f=>{ const o=osc('square',f,t,.7); const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=f; const og=env(t,v*.05,.6); o.connect(bp).connect(og).connect(patBus); }); },
+  click(t,level){ const o=osc('sine', level===2?1760:(level===1?1320:990), t,.05); const g=env(t, level===2?.9:(level===1?.6:.35), .035,.001); o.connect(g).connect(metBus); }
+};
+function preview(id, acc){ initAudio(); if(ctx.state==='suspended') ctx.resume(); SYN[id](ctx.currentTime+.01, acc?1:.7); }
+
+/* ---------- scheduler ---------- */
+let playing=false, timer=null, nextTime=0, seq=[], segI=0, step=0, loopN=0, drawQ=[], raf=null, wake=null;
+let practiceMs = 0, lastTick = 0;
+function buildSeq(first){
+  const q=[]; if(first && S.countIn) q.push({t:'count'});
+  for(let g=0; g<S.grooveBars; g++) q.push({t:'groove', i:g, n:S.grooveBars});
+  for(let b=0; b<S.bars; b++) q.push({t:'fill', i:b, n:S.bars});
+  return q;
+}
+const secPerStep = () => 60/S.bpm/4;
+function start(){
+  initAudio(); if(ctx.state==='suspended') ctx.resume();
+  playing=true; seq=buildSeq(true); segI=0; step=0; loopN=0; drawQ=[];
+  nextTime = ctx.currentTime + .12; lastTick = performance.now();
+  timer = setInterval(schedule, 25); schedule();
+  raf = requestAnimationFrame(draw);
+  $('#playIcon').innerHTML='<rect x="6" y="5" width="4.5" height="14" fill="currentColor"/><rect x="13.5" y="5" width="4.5" height="14" fill="currentColor"/>';
+  $('#play').setAttribute('aria-label','עצור');
+  $('#tLoops').textContent='0';
+  try{ navigator.wakeLock?.request('screen').then(w=>wake=w).catch(()=>{}); }catch(e){}
+}
+function stop(){
+  playing=false; clearInterval(timer); cancelAnimationFrame(raf); drawQ=[];
+  $('#playIcon').innerHTML='<path d="M7 4l13 8-13 8z" fill="currentColor"/>';
+  $('#play').setAttribute('aria-label','נגן');
+  setPlayhead(null); $('#segPill').textContent='עצור'; $('#segPill').className='seg'; $('#countTxt').textContent='–';
+  document.querySelectorAll('#beats i').forEach(b=>b.className='');
+  try{ wake?.release(); }catch(e){} wake=null;
+}
+function schedule(){
+  while(nextTime < ctx.currentTime + .12){
+    scheduleStep(seq[segI], step, nextTime);
+    nextTime += secPerStep();
+    if(++step === 16){
+      step = 0;
+      if(++segI >= seq.length){ loopN++; onLoop(); seq = buildSeq(false); segI = 0; }
+    }
+  }
+}
+function scheduleStep(seg, st, t){
+  if(seg.t==='count'){ if(st%4===0) SYN.click(t, st===0?2:1); }
+  else if(S.metro){
+    if(S.subdiv===2){ if(st===4||st===12) SYN.click(t,1); }
+    else { const every = 16/S.subdiv; if(st%every===0) SYN.click(t, st===0?2:(st%4===0?1:0)); }
+  }
+  const hits = [];
+  if(seg.t==='groove' && S.listen!=='metro'){
+    for(const i of INST){ const c=S.groove[i.id][st]; if(c) hits.push({id:i.id, a:c.a}); }
+  }
+  const fillAudible = S.listen==='full' || (S.listen==='alt' && loopN%2===0);
+  if(seg.t==='fill' && fillAudible){
+    const abs = seg.i*16+st;
+    for(const i of INST){ const c=S.grid[i.id][abs]; if(c) hits.push({id:i.id, a:c.a}); }
+  }
+  if(S.land && st===0 && segI===0 && loopN>0 && seg.t!=='count' && S.listen!=='metro'){
+    if(!hits.some(h=>h.id==='crash')) hits.push({id:'crash',a:true});
+    if(!hits.some(h=>h.id==='kick')) hits.push({id:'kick',a:true});
+  }
+  for(const h of hits){ if(!S.mute[h.id]) SYN[h.id](t, h.a?1:.68); }
+  drawQ.push({t, seg, st});
+}
+function onLoop(){
+  $('#tLoops').textContent = loopN;
+  if(S.trOn && loopN % S.trEvery === 0 && S.bpm < S.trMax) setBpm(Math.min(S.trMax, S.bpm + S.trInc));
+}
+function draw(){
+  const now = ctx.currentTime;
+  let cur=null;
+  while(drawQ.length && drawQ[0].t <= now) cur = drawQ.shift();
+  if(cur){
+    const {seg, st} = cur;
+    const pill = $('#segPill');
+    if(seg.t==='count'){ pill.textContent='ספירה…'; pill.className='seg'; }
+    else if(seg.t==='groove'){ pill.textContent=`ביט ${seg.i+1}/${seg.n}`; pill.className='seg groove'; }
+    else { pill.textContent = S.bars>1 ? `מעבר ${seg.i+1}/${seg.n}` : 'מעבר'; pill.className='seg fill'; }
+    const beat = Math.floor(st/4);
+    $('#countTxt').textContent = st%4===0 ? String(beat+1) : COUNTS[st%4];
+    document.querySelectorAll('#beats i').forEach((b,k)=>{ b.className = k===beat ? (k===0?'on one':'on') : ''; });
+    let abs=null;
+    if(seg.t==='fill' && S.edit==='fill') abs=seg.i*16+st;
+    else if(seg.t==='groove' && S.edit==='groove') abs=st;
+    setPlayhead(abs);
+  }
+  const p = performance.now(); practiceMs += p - lastTick; lastTick = p;
+  const sec = Math.floor(practiceMs/1000);
+  $('#tElapsed').textContent = String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
+  raf = requestAnimationFrame(draw);
+}
+
+/* ---------- tempo ---------- */
+function setBpm(v){ S.bpm = Math.max(30, Math.min(240, Math.round(v))); $('#bpmVal').textContent = S.bpm; $('#bpmRange').value = S.bpm; persist(); }
+let taps=[];
+$('#tap').addEventListener('click', ()=>{
+  const now=performance.now(); taps = taps.filter(t=>now-t<2500); taps.push(now);
+  if(taps.length>=2){ const iv=[]; for(let i=1;i<taps.length;i++) iv.push(taps[i]-taps[i-1]); const last=iv.slice(-4); setBpm(60000/(last.reduce((a,b)=>a+b,0)/last.length)); }
+});
+$('#bpmUp').onclick=()=>setBpm(S.bpm+1);
+$('#bpmDown').onclick=()=>setBpm(S.bpm-1);
+$('#bpmRange').oninput=e=>setBpm(+e.target.value);
+$('#play').onclick=()=> playing?stop():start();
+$('#metroBtn').onclick=()=>{ S.metro=!S.metro; syncUI(); persist(); };
+
+/* ---------- grid ---------- */
+let cells = {}, hcells = [];
+function renderGrid(){
+  const g = $('#grid'); g.innerHTML=''; cells={}; hcells=[]; lastPh=null;
+  const n = NB()*16, grid=G();
+  const sp = s => (s>0 && s%16===0 ? ' bar' : (s>0 && s%4===0 ? ' gap':''));
+  const hr = document.createElement('div'); hr.className='row hrow';
+  const hl = document.createElement('div'); hl.className='rlabel'; hl.textContent=''; hr.appendChild(hl);
+  for(let s=0;s<n;s++){ const h=document.createElement('div'); h.className='hcell'+(s%4===0?' b':'')+sp(s); h.textContent = s%4===0 ? (Math.floor((s%16)/4)+1) : COUNTS[s%4]; hr.appendChild(h); hcells.push(h); }
+  g.appendChild(hr);
+  for(const i of INST){
+    const r=document.createElement('div'); r.className='row'; r.style.setProperty('--c', i.color);
+    const lb=document.createElement('button'); lb.className='rlabel'+(S.mute[i.id]?' muted':''); lb.type='button';
+    lb.innerHTML=`<span class="dot"></span><span class="full">${i.name}</span><span class="short">${i.short}</span><span class="m">${S.mute[i.id]?'מושתק':'M'}</span>`;
+    lb.title='השתקה / ביטול השתקה';
+    lb.onclick=()=>{ S.mute[i.id]=!S.mute[i.id]; renderGrid(); persist(); };
+    r.appendChild(lb);
+    cells[i.id]=[];
+    for(let s=0;s<n;s++){
+      const c=document.createElement('div'); c.className='cell'+(s%4===0?' beat':'')+sp(s); c.dataset.i=i.id; c.dataset.s=s;
+      c.setAttribute('role','button'); c.setAttribute('aria-label', `${i.name}, ספירה ${s+1}`);
+      r.appendChild(c); cells[i.id].push(c); paintCell(i.id,s);
+    }
+    g.appendChild(r);
+  }
+  requestAnimationFrame(updateScroller);
+}
+function paintCell(id,s){
+  const c=cells[id]?.[s]; if(!c) return; const v=G()[id][s];
+  c.classList.toggle('on', !!v); c.classList.toggle('acc', !!(v&&v.a)); c.textContent = v ? v.h : '';
+}
+function handFor(id,s){ if(id==='kick') return 'K'; if(S.brush==='R'||S.brush==='L') return S.brush; return s%2===0?'R':'L'; }
+function applyCell(id,s,mode){
+  const grid=G();
+  if(mode==='clear'){ if(!grid[id][s]) return; grid[id][s]=null; }
+  else { const h=handFor(id,s); const cur=grid[id][s]; if(cur && cur.h===h && cur.a===S.accent) return; grid[id][s]={h,a:S.accent}; if(!playing) preview(id,S.accent); }
+  paintCell(id,s); changed();
+}
+// Tap cycle on one cell: empty -> brush hand -> other hand -> empty. Kick: empty -> K -> empty.
+function tapCell(id,s){
+  const grid=G(), cur=grid[id][s];
+  if(S.brush==='erase'){ if(cur){ grid[id][s]=null; paintCell(id,s); changed(); } return 'clear'; }
+  if(!cur){ applyCell(id,s,'set'); return 'set'; }
+  if(cur.a!==S.accent){ cur.a=S.accent; paintCell(id,s); changed(); if(!playing) preview(id,cur.a); return 'set'; }
+  if(id!=='kick' && cur.h===handFor(id,s)){ cur.h = cur.h==='R'?'L':'R'; paintCell(id,s); changed(); if(!playing) preview(id,cur.a); return 'set'; }
+  grid[id][s]=null; paintCell(id,s); changed(); return 'clear';
+}
+function modeFor(id,s){ const cur=G()[id][s]; return (S.brush==='erase' || (cur && cur.h===handFor(id,s) && cur.a===S.accent)) ? 'clear' : 'set'; }
+// Mouse: press applies at once and drag paints. Touch/pen: only a clean tap applies, so swiping scrolls without editing.
+let painting=null, touchStart=null;
+const gridEl=$('#grid');
+gridEl.addEventListener('pointerdown', e=>{
+  const c=e.target.closest('.cell'); if(!c) return;
+  if(e.pointerType==='mouse'){ painting=tapCell(c.dataset.i,+c.dataset.s); }
+  else touchStart={x:e.clientX, y:e.clientY, cell:c, sl:$('#gridwrap').scrollLeft, st:window.scrollY, t:performance.now()};
+});
+gridEl.addEventListener('pointerover', e=>{
+  if(!painting || !(e.buttons&1)) return; const c=e.target.closest('.cell'); if(!c) return;
+  applyCell(c.dataset.i, +c.dataset.s, painting);
+});
+gridEl.addEventListener('pointerup', e=>{
+  if(!touchStart) return; const ts=touchStart; touchStart=null;
+  const moved=Math.hypot(e.clientX-ts.x, e.clientY-ts.y);
+  const scrolled=Math.abs($('#gridwrap').scrollLeft-ts.sl)>2 || Math.abs(window.scrollY-ts.st)>2;
+  const c=e.target.closest('.cell');
+  if(moved<10 && !scrolled && c===ts.cell && performance.now()-ts.t<700) tapCell(c.dataset.i,+c.dataset.s);
+});
+gridEl.addEventListener('pointercancel', ()=>{ touchStart=null; });
+window.addEventListener('pointerup', ()=>painting=null);
+
+/* ---------- scrolling: slider + auto-follow ---------- */
+const wrap=$('#gridwrap'), gs=$('#gridScroll');
+function maxScroll(){ return Math.max(0, wrap.scrollWidth-wrap.clientWidth); }
+function updateScroller(){
+  const m=maxScroll(); $('#scroller').hidden = m<4;
+  gs.value = m ? Math.round(wrap.scrollLeft/m*1000) : 0;
+}
+let syncing=false;
+wrap.addEventListener('scroll', ()=>{
+  const m=maxScroll(); if(m) gs.value=Math.round(wrap.scrollLeft/m*1000);
+  const nt=$('#notation'); const nm=nt.scrollWidth-nt.clientWidth;
+  if(nm>0 && m>0){ syncing=true; nt.scrollLeft = wrap.scrollLeft/m*nm; }
+}, {passive:true});
+gs.addEventListener('input', ()=>{ wrap.scrollLeft = gs.value/1000*maxScroll(); });
+window.addEventListener('resize', ()=>requestAnimationFrame(updateScroller));
+$('#followBtn').onclick=()=>{ S.follow=!S.follow; syncUI(); persist(); };
+function followTo(abs){
+  if(!S.follow || abs%4!==0) return;
+  const h=hcells[abs]; if(!h) return;
+  const labelW = cells[INST[0].id]?.[0]?.parentElement.firstChild.offsetWidth || 90;
+  const left=h.offsetLeft, right=left+h.offsetWidth*4+12;
+  const viewL=wrap.scrollLeft+labelW, viewR=wrap.scrollLeft+wrap.clientWidth;
+  if(left<viewL || right>viewR) wrap.scrollTo({left:Math.max(0,left-labelW-10), behavior: abs===0?'auto':'smooth'});
+}
+let lastPh=null;
+function setPlayhead(abs){
+  if(lastPh!==null){ for(const i of INST) cells[i.id]?.[lastPh]?.classList.remove('ph'); hcells[lastPh]?.classList.remove('ph'); }
+  lastPh = (abs!==null && abs < NB()*16) ? abs : null;
+  const m=document.getElementById('nph');
+  if(lastPh!==null){
+    for(const i of INST) cells[i.id][lastPh].classList.add('ph'); hcells[lastPh].classList.add('ph');
+    if(m && NX[lastPh]!=null){ m.setAttribute('x', NX[lastPh]-SW/2); m.style.display=''; }
+    followTo(lastPh);
+  } else if(m) m.style.display='none';
+}
+
+/* ---------- notation ---------- */
+const SW=22, PADB=12, LEAD=50, BEAMY=24;
+let NX=[];
+const yOf = pos => 92 - pos*5;
+function renderNotation(){
+  const bars=NB(), grid=G();
+  const barW=16*SW+PADB*2, W=LEAD+bars*barW+8, H=148;
+  NX=[];
+  let o=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="תווים">`;
+  o+=`<rect id="nph" x="0" y="8" width="${SW}" height="118" rx="4" fill="#dcab4a" opacity=".28" style="display:none"/>`;
+  for(let k=0;k<5;k++){ const y=52+k*10; o+=`<line x1="6" x2="${W-6}" y1="${y}" y2="${y}" stroke="#1b1e26" stroke-width="1"/>`; }
+  o+=`<rect x="12" y="62" width="3.5" height="20" fill="#1b1e26"/><rect x="19" y="62" width="3.5" height="20" fill="#1b1e26"/>`;
+  o+=`<text x="36" y="71" font-family="Georgia,serif" font-weight="700" font-size="21" text-anchor="middle" fill="#1b1e26">4</text><text x="36" y="91" font-family="Georgia,serif" font-weight="700" font-size="21" text-anchor="middle" fill="#1b1e26">4</text>`;
+  for(let b=0;b<bars;b++){
+    const bx=LEAD+b*barW, xEnd=bx+barW;
+    if(b<bars-1) o+=`<line x1="${xEnd}" x2="${xEnd}" y1="52" y2="92" stroke="#1b1e26"/>`;
+    else o+=`<circle cx="${xEnd-11}" cy="67" r="2" fill="#1b1e26"/><circle cx="${xEnd-11}" cy="77" r="2" fill="#1b1e26"/><line x1="${xEnd-6}" x2="${xEnd-6}" y1="52" y2="92" stroke="#1b1e26"/><rect x="${xEnd-3}" y="52" width="4" height="40" fill="#1b1e26"/>`;
+    for(let beat=0;beat<4;beat++){
+      const base=b*16+beat*4;
+      const xs = k => bx+PADB+(beat*4+k)*SW+SW/2;
+      for(let k=0;k<4;k++) NX[base+k]=xs(k);
+      const on=[]; for(let k=0;k<4;k++){ const hs=INST.filter(i=>grid[i.id][base+k]).map(i=>({...i, v:grid[i.id][base+k]})); if(hs.length) on.push({k,hs}); }
+      for(let k=0;k<4;k++) o+=`<text x="${xs(k)}" y="140" font-family="JetBrains Mono,monospace" font-size="${k?9.5:11}" font-weight="${k?500:700}" text-anchor="middle" fill="${k?'#9a9ea8':'#1b1e26'}">${k?COUNTS[k]:beat+1}</text>`;
+      if(!on.length){ o+=quarterRest(bx+PADB+beat*4*SW+SW*2); continue; }
+      const lead=on[0].k;
+      if(lead===1) o+=rest16(xs(0)); else if(lead===2) o+=rest8(xs(0)); else if(lead===3){ o+=rest8(xs(0)); o+=rest16(xs(2)); }
+      on.forEach((n,j)=>{ n.dur=(j<on.length-1?on[j+1].k:4)-n.k; });
+      for(const n of on){
+        const x=xs(n.k); let low=0;
+        for(const h of n.hs){
+          const y=yOf(h.pos); low=Math.max(low,y);
+          if(h.pos>=10) o+=`<line x1="${x-9}" x2="${x+9}" y1="42" y2="42" stroke="#1b1e26"/>`;
+          if(h.x) o+=`<path d="M${x-4.5},${y-4.5}L${x+4.5},${y+4.5}M${x+4.5},${y-4.5}L${x-4.5},${y+4.5}" stroke="${h.hex}" stroke-width="2.3" stroke-linecap="round"/>`;
+          else o+=`<ellipse cx="${x}" cy="${y}" rx="5.6" ry="4.2" transform="rotate(-20 ${x} ${y})" fill="${h.hex}"/>`;
+          if(n.dur===3) o+=`<circle cx="${x+10}" cy="${h.pos%2===0?y-3:y}" r="1.8" fill="#1b1e26"/>`;
+        }
+        const sx=x+5; o+=`<line x1="${sx}" x2="${sx}" y1="${low-1}" y2="${BEAMY}" stroke="#1b1e26" stroke-width="1.4"/>`;
+        n.sx=sx;
+        if(n.hs.some(h=>h.v.a)) o+=`<text x="${x+2}" y="15" font-family="Georgia,serif" font-weight="700" font-size="14" text-anchor="middle" fill="#1b1e26">&gt;</text>`;
+        const lt = colLetter(n.hs.map(h=>h.v));
+        const col = lt==='R'?'#d6382c':lt==='L'?'#1d6fd1':lt==='K'?'#b02a60':'#1b1e26';
+        o+=`<text x="${x}" y="118" font-family="JetBrains Mono,monospace" font-weight="700" font-size="14" text-anchor="middle" fill="${col}">${lt}</text>`;
+      }
+      if(on.length===1){
+        const n=on[0]; const fl = n.dur===1?2:(n.dur===2||n.dur===3?1:0);
+        for(let f=0;f<fl;f++) o+=`<path d="M${n.sx},${BEAMY+f*6} c1,6 10,7 7,16" stroke="#1b1e26" stroke-width="1.8" fill="none"/>`;
+      } else {
+        o+=`<rect x="${on[0].sx-.7}" y="${BEAMY}" width="${on[on.length-1].sx-on[0].sx+1.4}" height="4" fill="#1b1e26"/>`;
+        let j=0;
+        while(j<on.length){
+          if(on[j].dur!==1){ j++; continue; }
+          let e=j; while(e+1<on.length && on[e+1].dur===1) e++;
+          const y2=BEAMY+6.5;
+          if(e>j) o+=`<rect x="${on[j].sx-.7}" y="${y2}" width="${on[e].sx-on[j].sx+1.4}" height="4" fill="#1b1e26"/>`;
+          else { const x0 = j>0 ? on[j].sx-8 : on[j].sx; o+=`<rect x="${x0}" y="${y2}" width="8" height="4" fill="#1b1e26"/>`; }
+          j=e+1;
+        }
+      }
+    }
+  }
+  o+='</svg>';
+  $('#notation').innerHTML=o;
+  if(lastPh!==null){ const m=document.getElementById('nph'); if(m && NX[lastPh]!=null){ m.setAttribute('x', NX[lastPh]-SW/2); m.style.display=''; } }
+}
+function quarterRest(x){ return `<path d="M${x-2},56 l5,7 l-5,6 l5,7 q-7,-3 -3,7" stroke="#1b1e26" stroke-width="2.4" fill="none" stroke-linejoin="round"/>`; }
+function rest8(x){ return `<circle cx="${x-2.5}" cy="67" r="2.6" fill="#1b1e26"/><path d="M${x-3},68.5 q4,2 7,-3 L${x-1},84" stroke="#1b1e26" stroke-width="1.6" fill="none"/>`; }
+function rest16(x){ return `<circle cx="${x-1}" cy="64" r="2.4" fill="#1b1e26"/><circle cx="${x-3.5}" cy="72" r="2.4" fill="#1b1e26"/><path d="M${x-1.5},65.5 q4,2 7,-3 M${x-4},73.5 q4,2 7,-3 M${x+5.5},62.5 L${x-1},88" stroke="#1b1e26" stroke-width="1.5" fill="none"/>`; }
+
+/* ---------- stats & sticking line ---------- */
+function renderStats(){
+  const bars=NB(), grid=G(), n=bars*16; let R=0,L=0,K=0,run=0,maxRun=0,runH='',last='', notes=0;
+  const lines=[];
+  for(let b=0;b<bars;b++){
+    let str='';
+    for(let s=b*16;s<b*16+16;s++){
+      if(s%4===0 && s%16) str+=' ';
+      const col=INST.filter(i=>grid[i.id][s]).map(i=>grid[i.id][s]);
+      const ch=colLetter(col); str+=ch; if(ch==='-') continue;
+      notes++; col.forEach(c=>{ if(c.h==='R')R++; else if(c.h==='L')L++; else K++; });
+      if(ch==='R'||ch==='L'){ if(ch===last) run++; else { run=1; last=ch; } if(run>maxRun){maxRun=run; runH=ch;} }
+    }
+    lines.push(str);
+  }
+  $('#stickLine').innerHTML = lines.map((l,i)=>`<span><em>${bars>1?`${i+1}| `:''}</em>${l}</span>`).join('');
+  $('#stats').innerHTML = `<span>ימין <b class="R">${R}</b></span><span>שמאל <b class="L">${L}</b></span><span>בס <b>${K}</b></span><span>מכות <b>${notes}</b></span>`
+    + (maxRun>=2?`<span>רצף ארוך באותה יד: <b>${maxRun}× ${runH}</b></span>`:'')
+    + `<span>צפיפות: <b>${Math.round(notes/n*100)}%</b></span>`;
+}
+function changed(){ if(S.edit==='groove') S.grooveIdx=null; else S.fillIdx=null; renderSkip(); renderNotation(); renderStats(); persist(); }
+function fullRender(){ renderGrid(); renderNotation(); renderStats(); syncUI(); persist(); }
+
+/* ---------- edit mode ---------- */
+function setEdit(m){ S.edit=m; fullRender(); wrap.scrollLeft=0; }
+$('#tabFill').onclick=()=>setEdit('fill');
+$('#tabGroove').onclick=()=>setEdit('groove');
+
+/* ---------- tools ---------- */
+$('#brush').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; S.brush=b.dataset.b; syncUI(); persist(); });
+$('#accBtn').onclick=()=>{ S.accent=!S.accent; syncUI(); persist(); };
+$('#barsSel').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; S.bars=+b.dataset.n; if(playing) stop(); fullRender(); });
+$('#mirrorBtn').onclick=()=>{ const g=G(); for(const i of INST) g[i.id]=g[i.id].map(c=>c&&c.h!=='K'?{...c,h:c.h==='R'?'L':'R'}:c); fullRender(); };
+$('#altBtn').onclick=()=>{ const g=G(); let h='R'; for(let s=0;s<NB()*16;s++){ const hand=INST.filter(i=>i.id!=='kick' && g[i.id][s]); if(!hand.length) continue; if(hand.length===1){ g[hand[0].id][s].h=h; h=h==='R'?'L':'R'; } else { g[hand[0].id][s].h='R'; g[hand[1].id][s].h='L'; hand.slice(2).forEach(x=>g[x.id][s].h='R'); } } fullRender(); };
+$('#copyBtn').onclick=()=>{ for(const i of INST) for(let b=1;b<S.bars;b++) for(let s=0;s<16;s++) S.grid[i.id][b*16+s]=S.grid[i.id][s]?{...S.grid[i.id][s]}:null; fullRender(); };
+let clearArm=null;
+$('#clearBtn').onclick=e=>{
+  const btn=e.currentTarget;
+  if(!clearArm){ btn.textContent='לנקות הכול?'; clearArm=setTimeout(()=>{ btn.textContent='נקה'; clearArm=null; },3000); return; }
+  clearTimeout(clearArm); clearArm=null; btn.textContent='נקה';
+  if(S.edit==='groove') S.groove=emptyGrid(); else S.grid=emptyGrid();
+  fullRender();
+};
+
+/* ---------- settings bindings ---------- */
+function bind(id, key, conv=v=>v, prop='value'){ const el=$(id); el.addEventListener('change', ()=>{ S[key]=conv(el[prop]); if(key.startsWith('vol')) setVolumes(); persist(); }); if(key.startsWith('vol')) el.addEventListener('input', ()=>{ S[key]=conv(el[prop]); setVolumes(); }); }
+bind('#grooveBars','grooveBars',Number); bind('#land','land',Boolean,'checked');
+bind('#subdiv','subdiv',Number); bind('#countIn','countIn',Boolean,'checked'); bind('#listen','listen');
+bind('#volPat','volPat',Number); bind('#volMet','volMet',Number);
+bind('#trOn','trOn',Boolean,'checked'); bind('#trInc','trInc',v=>Math.max(1,+v||1)); bind('#trEvery','trEvery',v=>Math.max(1,+v||1)); bind('#trMax','trMax',v=>Math.max(40,+v||120));
+
+function syncUI(){
+  if(typeof renderSkip==='function' && $('#skipName')) try{ renderSkip(); }catch(e){}
+  $('#bpmVal').textContent=S.bpm; $('#bpmRange').value=S.bpm;
+  const mb=$('#metroBtn'); mb.classList.toggle('on',S.metro); mb.setAttribute('aria-pressed',S.metro);
+  document.querySelectorAll('#brush button').forEach(b=>b.classList.toggle('on', b.dataset.b===S.brush));
+  $('#accBtn').classList.toggle('on',S.accent); $('#accBtn').setAttribute('aria-pressed',S.accent);
+  document.querySelectorAll('#barsSel button').forEach(b=>b.classList.toggle('on', +b.dataset.n===S.bars));
+  const gr=S.edit==='groove';
+  $('#tabFill').classList.toggle('on',!gr); $('#tabGroove').classList.toggle('on',gr);
+  $('#tabFill').setAttribute('aria-selected',!gr); $('#tabGroove').setAttribute('aria-selected',gr);
+  $('#barsBox').hidden=gr; $('#copyBtn').hidden=gr || S.bars<2;
+  $('#modeNote').textContent = gr
+    ? `עורכים את הביט הראשי (תיבה אחת). הוא מתנגן ${S.grooveBars?S.grooveBars+' פעמים לפני המעבר':'רק אם בוחרים תיבות ביט במבנה הסבב'}.`
+    : `עורכים את המעבר (${S.bars} ${S.bars>1?'תיבות':'תיבה'}). הוא מתנגן אחרי ${S.grooveBars?S.grooveBars+' תיבות ביט':'בלי ביט לפניו'}.`;
+  $('#grooveBars').value=S.grooveBars; $('#land').checked=S.land;
+  $('#subdiv').value=S.subdiv; $('#countIn').checked=S.countIn; $('#listen').value=S.listen;
+  $('#volPat').value=S.volPat; $('#volMet').value=S.volMet;
+  $('#trOn').checked=S.trOn; $('#trInc').value=S.trInc; $('#trEvery').value=S.trEvery; $('#trMax').value=S.trMax;
+  const fb=$('#followBtn'); fb.classList.toggle('on',S.follow); fb.setAttribute('aria-pressed',S.follow);
+}
+$('#grooveBars').addEventListener('change', syncUI);
+
+/* ---------- library ---------- */
+let libTab='fills', libLv=0;
+function copyGrid(src){ const g=emptyGrid(); for(const i of INST) if(src[i.id]) src[i.id].forEach((c,s)=>{ if(s<MAXSTEPS) g[i.id][s]=c?{...c}:null; }); return g; }
+function afterLoad(){ fullRender(); wrap.scrollLeft=0; $('#editor').scrollIntoView({behavior:'smooth', block:'start'}); }
+function loadFill(f, stay){ S.grid=buildFill(f); S.bars=f.bars; S.edit='fill'; S.fillIdx=FILLS.indexOf(f); if(stay){ fullRender(); wrap.scrollLeft=0; } else afterLoad(); }
+function loadGroove(g, stay){ S.groove=gridFromSeq(g.seq); S.edit='groove'; S.grooveIdx=GROOVES.indexOf(g); if(stay){ fullRender(); wrap.scrollLeft=0; } else afterLoad(); }
+// Skip bar: steps through the fill list (respecting the level filter) or the groove list, without stopping playback.
+function skipList(){ return S.edit==='groove' ? GROOVES : FILLS.filter(f=>!libLv||f.l===libLv); }
+function skip(dir){
+  const list=skipList(); if(!list.length) return;
+  const curObj = S.edit==='groove' ? GROOVES[S.grooveIdx] : FILLS[S.fillIdx];
+  let k=list.indexOf(curObj);
+  if(dir==='rnd'){ let n; do{ n=Math.floor(Math.random()*list.length); }while(list.length>1 && n===k); k=n; }
+  else k = k<0 ? (dir>0?0:list.length-1) : (k+dir+list.length)%list.length;
+  if(S.edit==='groove') loadGroove(list[k], true); else loadFill(list[k], true);
+}
+function renderSkip(){
+  const gr=S.edit==='groove';
+  const cur = gr ? GROOVES[S.grooveIdx] : FILLS[S.fillIdx];
+  $('#skipKind').textContent = gr ? 'ביט ראשי' : (libLv ? 'מעבר · '+LEVELS[libLv] : 'מעבר');
+  $('#skipName').textContent = cur ? cur.n : (gr ? 'ביט שערכת' : 'מעבר שערכת');
+}
+$('#skipPrev').onclick=()=>skip(1*-1);
+$('#skipNext').onclick=()=>skip(1);
+$('#skipRnd').onclick=()=>skip('rnd');
+function lvDots(l){ return `<span class="lv" aria-label="${LEVELS[l]}">${[1,2,3].map(k=>`<i class="${k<=l?'f':''}"></i>`).join('')}</span>`; }
+function renderLib(){
+  document.querySelectorAll('#libTabs .chip').forEach(c=>c.classList.toggle('on', c.dataset.tab===libTab));
+  document.querySelectorAll('#levelChips .chip').forEach(c=>c.classList.toggle('on', +c.dataset.lv===libLv));
+  $('#levelChips').hidden = libTab!=='fills';
+  $('#saveRow').hidden = libTab!=='saved';
+  let html='';
+  if(libTab==='fills'){
+    const list=FILLS.map((f,k)=>({f,k})).filter(x=>!libLv||x.f.l===libLv);
+    html = list.map(({f,k})=>`<button class="fillcard" data-fill="${k}"><span class="row2"><span class="t">${f.n}</span>${lvDots(f.l)}</span><span class="meta">${lenLabel(f)} · ${LEVELS[f.l]}</span><span class="st">${stickPreview(f.seq)}</span></button>`).join('');
+  } else if(libTab==='grooves'){
+    html = GROOVES.map((g,k)=>`<button class="fillcard" data-groove="${k}"><span class="t">${g.n}</span><span class="st">${stickPreview(g.seq)}</span></button>`).join('');
+  } else {
+    html = saved.length ? saved.map((p,k)=>`<div class="fillcard" data-saved="${k}" role="button" tabindex="0"><span class="row2"><span class="t">${escapeHtml(p.name)}</span><button class="chip" data-del="${k}" style="padding:3px 10px;font-size:12px">מחק</button></span><span class="meta">${p.type==='groove'?'ביט ראשי':'מעבר · '+p.bars+' '+(p.bars>1?'תיבות':'תיבה')} · ${p.bpm} BPM</span></div>`).join('')
+      : '<p class="hint libsec" style="margin:0">עוד אין כאן כלום. ערכו מעבר או ביט, תנו לו שם ושמרו.</p>';
+  }
+  $('#libGrid').innerHTML=html;
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+$('#libTabs').addEventListener('click', e=>{ const c=e.target.closest('[data-tab]'); if(!c) return; libTab=c.dataset.tab; renderLib(); });
+$('#levelChips').addEventListener('click', e=>{ const c=e.target.closest('[data-lv]'); if(!c) return; libLv=+c.dataset.lv; renderLib(); renderSkip(); });
+$('#libGrid').addEventListener('click', e=>{
+  const del=e.target.closest('[data-del]');
+  if(del){ e.stopPropagation();
+    if(!del.classList.contains('sure')){ del.classList.add('sure'); del.textContent='בטוח?'; del.style.background='var(--warn)'; setTimeout(()=>{ if(del.isConnected){ del.classList.remove('sure'); del.textContent='מחק'; del.style.background=''; } },3000); return; }
+    saved.splice(+del.dataset.del,1); store.set('dft.saved',saved); renderLib(); return; }
+  const f=e.target.closest('[data-fill]'); if(f){ loadFill(FILLS[+f.dataset.fill]); return; }
+  const g=e.target.closest('[data-groove]'); if(g){ loadGroove(GROOVES[+g.dataset.groove]); return; }
+  const s=e.target.closest('[data-saved]'); if(s){ const it=saved[+s.dataset.saved];
+    if(it.type==='groove'){ S.groove=copyGrid(it.grid); S.edit='groove'; } else { S.grid=copyGrid(it.grid); S.bars=it.bars; S.edit='fill'; }
+    setBpm(it.bpm); afterLoad(); }
+});
+$('#libGrid').addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.matches('[data-saved]')) e.target.click(); });
+$('#saveBtn').onclick=()=>{
+  const inp=$('#saveName'); const gr=S.edit==='groove';
+  const name=inp.value.trim() || `${gr?'ביט':'מעבר'} ${saved.length+1}`;
+  const src=G(), n=NB()*16, grid={}; for(const i of INST) grid[i.id]=src[i.id].slice(0,n);
+  saved.unshift({name, type:gr?'groove':'fill', bars:NB(), bpm:S.bpm, grid}); store.set('dft.saved',saved); inp.value=''; renderLib();
+  const b=$('#saveBtn'); const t=b.textContent; b.textContent='נשמר ✓'; setTimeout(()=>b.textContent=t,1500);
+};
+
+/* ---------- keyboard ---------- */
+document.addEventListener('keydown', e=>{
+  if(e.target.matches('input[type=text],input[type=number],select')) return;
+  if(e.code==='Space'){ e.preventDefault(); playing?stop():start(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); setBpm(S.bpm+(e.shiftKey?5:1)); }
+  else if(e.key==='ArrowDown'){ e.preventDefault(); setBpm(S.bpm-(e.shiftKey?5:1)); }
+  else if(e.key==='r'||e.key==='R'){ S.brush='R'; syncUI(); }
+  else if(e.key==='l'||e.key==='L'){ S.brush='L'; syncUI(); }
+  else if(e.key==='a'||e.key==='A'){ S.accent=!S.accent; syncUI(); }
+});
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) lastTick=performance.now(); });
+
+syncUI(); renderGrid(); renderNotation(); renderStats(); renderLib();
+})();
+</script>
+
+</body>
+</html>
