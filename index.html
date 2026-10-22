@@ -1,16 +1,8 @@
-<!doctype html>
-<html lang="he">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#12161f">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Fill Drill – Drum Fill Trainer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Secular+One&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
-html,body{margin:0}
-img{max-width:100%}
-:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 :root{
   color-scheme: dark;
   --bg:#12161f; --panel:#1a1f2b; --panel2:#222938; --pad:#262d3c; --pad2:#2f3749; --line:#343c50;
@@ -156,6 +148,15 @@ kbd{font-family:"JetBrains Mono",monospace;background:var(--panel2);border:1px s
 .fillcard .lv i.f{background:var(--brass)}
 .fillcard .st{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:1px;color:var(--muted);direction:ltr;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fillcard .row2{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.secrow{margin-bottom:-2px}
+.secrow .rlabel{visibility:hidden;height:22px}
+.sectag{flex:none;font-size:12px;font-weight:700;padding:3px 8px;border-radius:7px 7px 0 0;white-space:nowrap;direction:rtl;text-align:left}
+.sectag.g{background:color-mix(in srgb,var(--brass) 22%,transparent);color:var(--brass)}
+.sectag.f{background:var(--panel2);color:var(--text)}
+.sectag.bar{margin-left:16px}
+.cell.gv{background:color-mix(in srgb,var(--brass) 9%,var(--pad))}
+.cell.gv.beat{background:color-mix(in srgb,var(--brass) 13%,var(--pad2))}
+.cell.gv.on{background:var(--c)}
 .skipbar{display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:6px}
 .skipbtn{width:44px;height:44px;flex:none;border-radius:10px;border:1px solid var(--line);background:var(--pad);color:var(--text);font:inherit;font-size:26px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .skipbtn:hover{border-color:var(--brass)}
@@ -186,8 +187,6 @@ kbd{font-family:"JetBrains Mono",monospace;background:var(--panel2);border:1px s
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
-</head>
-<body>
 <div class="app" dir="rtl">
   <header class="head">
     <div>
@@ -222,6 +221,7 @@ kbd{font-family:"JetBrains Mono",monospace;background:var(--panel2);border:1px s
 
   <section class="card" id="editor">
     <div class="modetabs" role="tablist">
+      <button id="tabBoth" role="tab">ביט + מעבר</button>
       <button id="tabFill" role="tab">המעבר</button>
       <button id="tabGroove" role="tab">הביט הראשי</button>
     </div>
@@ -419,7 +419,7 @@ function stickPreview(seq){ const cols=parseSeq(seq); let o=''; cols.forEach((c,
 
 /* ---------- state ---------- */
 const S = {
-  bpm:70, bars:1, grid:emptyGrid(), groove:gridFromSeq(GROOVES[0].seq), edit:'fill',
+  bpm:70, bars:1, grid:emptyGrid(), groove:gridFromSeq(GROOVES[0].seq), edit:'both', v2:true,
   brush:'auto', accent:false, metro:true, subdiv:4,
   countIn:true, grooveBars:3, land:true, listen:'full',
   trOn:false, trInc:4, trEvery:2, trMax:120, volPat:85, volMet:60, mute:{}, follow:true
@@ -433,14 +433,27 @@ function persist(){ clearTimeout(saveT); saveT=setTimeout(()=>store.set('dft.sta
 (function load(){
   const st = store.get('dft.state', null);
   if(st && st.grid){
-    delete st.grooveStyle; Object.assign(S, st);
+    delete st.grooveStyle; Object.assign(S, st); if(!st.v2){ S.edit='both'; S.v2=true; }
     for(const key of ['grid','groove']){ if(!S[key]) S[key]=emptyGrid(); for(const i of INST) if(!S[key][i.id]) S[key][i.id]=Array(MAXSTEPS).fill(null); }
     if(!st.groove) S.groove=gridFromSeq(GROOVES[0].seq);
   } else { const f0=FILLS.find(f=>f.n.startsWith('RLRK')); S.grid = buildFill(f0); S.fillIdx=FILLS.indexOf(f0); S.grooveIdx=0; }
 })();
 let saved = store.get('dft.saved', []);
-const G  = () => S.edit==='groove' ? S.groove : S.grid;
-const NB = () => S.edit==='groove' ? 1 : S.bars;
+// The editor can show the groove alone, the fill alone, or both side by side ("both": groove bar, then the fill bars).
+const isBoth = () => S.edit==='both';
+function G(){
+  if(S.edit==='groove') return S.groove;
+  if(S.edit==='fill') return S.grid;
+  const o={}; for(const i of INST) o[i.id]=S.groove[i.id].slice(0,16).concat(S.grid[i.id].slice(0,S.bars*16)); return o;
+}
+const NB = () => S.edit==='groove' ? 1 : (S.edit==='both' ? 1+S.bars : S.bars);
+function setCell(id,c,v){
+  if(S.edit==='groove') S.groove[id][c]=v;
+  else if(S.edit==='fill') S.grid[id][c]=v;
+  else if(c<16) S.groove[id][c]=v; else S.grid[id][c-16]=v;
+}
+const srcOf = c => S.edit==='both' ? (c<16?'groove':'fill') : S.edit;
+const grooveLabel = () => S.grooveBars ? `ביט x${S.grooveBars}` : 'ביט (לא מתנגן)';
 
 /* ---------- audio ---------- */
 let ctx, master, patBus, metBus, noiseBuf;
@@ -555,6 +568,7 @@ function draw(){
     let abs=null;
     if(seg.t==='fill' && S.edit==='fill') abs=seg.i*16+st;
     else if(seg.t==='groove' && S.edit==='groove') abs=st;
+    else if(isBoth()) abs = seg.t==='groove' ? st : (seg.t==='fill' ? 16+seg.i*16+st : null);
     setPlayhead(abs);
   }
   const p = performance.now(); practiceMs += p - lastTick; lastTick = p;
@@ -584,6 +598,14 @@ function renderGrid(){
   const sp = s => (s>0 && s%16===0 ? ' bar' : (s>0 && s%4===0 ? ' gap':''));
   const hr = document.createElement('div'); hr.className='row hrow';
   const hl = document.createElement('div'); hl.className='rlabel'; hl.textContent=''; hr.appendChild(hl);
+  if(isBoth()){
+    const sr=document.createElement('div'); sr.className='row secrow';
+    const sl=document.createElement('div'); sl.className='rlabel'; sr.appendChild(sl);
+    for(let b=0;b<NB();b++){ const t=document.createElement('div'); t.className='sectag'+(b===0?' g':' f')+(b>0?' bar':'');
+      t.style.width=`calc(var(--cell) * 16 + 3px * 15 + 7px * 3)`;
+      t.textContent = b===0 ? grooveLabel() : (S.bars>1 ? `מעבר · תיבה ${b}` : 'מעבר'); sr.appendChild(t); }
+    g.appendChild(sr);
+  }
   for(let s=0;s<n;s++){ const h=document.createElement('div'); h.className='hcell'+(s%4===0?' b':'')+sp(s); h.textContent = s%4===0 ? (Math.floor((s%16)/4)+1) : COUNTS[s%4]; hr.appendChild(h); hcells.push(h); }
   g.appendChild(hr);
   for(const i of INST){
@@ -595,7 +617,7 @@ function renderGrid(){
     r.appendChild(lb);
     cells[i.id]=[];
     for(let s=0;s<n;s++){
-      const c=document.createElement('div'); c.className='cell'+(s%4===0?' beat':'')+sp(s); c.dataset.i=i.id; c.dataset.s=s;
+      const c=document.createElement('div'); c.className='cell'+(s%4===0?' beat':'')+sp(s)+(isBoth()&&s<16?' gv':''); c.dataset.i=i.id; c.dataset.s=s;
       c.setAttribute('role','button'); c.setAttribute('aria-label', `${i.name}, ספירה ${s+1}`);
       r.appendChild(c); cells[i.id].push(c); paintCell(i.id,s);
     }
@@ -610,18 +632,18 @@ function paintCell(id,s){
 function handFor(id,s){ if(id==='kick') return 'K'; if(S.brush==='R'||S.brush==='L') return S.brush; return s%2===0?'R':'L'; }
 function applyCell(id,s,mode){
   const grid=G();
-  if(mode==='clear'){ if(!grid[id][s]) return; grid[id][s]=null; }
-  else { const h=handFor(id,s); const cur=grid[id][s]; if(cur && cur.h===h && cur.a===S.accent) return; grid[id][s]={h,a:S.accent}; if(!playing) preview(id,S.accent); }
-  paintCell(id,s); changed();
+  if(mode==='clear'){ if(!grid[id][s]) return; setCell(id,s,null); }
+  else { const h=handFor(id,s); const cur=grid[id][s]; if(cur && cur.h===h && cur.a===S.accent) return; setCell(id,s,{h,a:S.accent}); if(!playing) preview(id,S.accent); }
+  paintCell(id,s); changed(srcOf(s));
 }
 // Tap cycle on one cell: empty -> brush hand -> other hand -> empty. Kick: empty -> K -> empty.
 function tapCell(id,s){
   const grid=G(), cur=grid[id][s];
-  if(S.brush==='erase'){ if(cur){ grid[id][s]=null; paintCell(id,s); changed(); } return 'clear'; }
+  if(S.brush==='erase'){ if(cur){ setCell(id,s,null); paintCell(id,s); changed(srcOf(s)); } return 'clear'; }
   if(!cur){ applyCell(id,s,'set'); return 'set'; }
-  if(cur.a!==S.accent){ cur.a=S.accent; paintCell(id,s); changed(); if(!playing) preview(id,cur.a); return 'set'; }
-  if(id!=='kick' && cur.h===handFor(id,s)){ cur.h = cur.h==='R'?'L':'R'; paintCell(id,s); changed(); if(!playing) preview(id,cur.a); return 'set'; }
-  grid[id][s]=null; paintCell(id,s); changed(); return 'clear';
+  if(cur.a!==S.accent){ cur.a=S.accent; paintCell(id,s); changed(srcOf(s)); if(!playing) preview(id,cur.a); return 'set'; }
+  if(id!=='kick' && cur.h===handFor(id,s)){ cur.h = cur.h==='R'?'L':'R'; paintCell(id,s); changed(srcOf(s)); if(!playing) preview(id,cur.a); return 'set'; }
+  setCell(id,s,null); paintCell(id,s); changed(srcOf(s)); return 'clear';
 }
 function modeFor(id,s){ const cur=G()[id][s]; return (S.brush==='erase' || (cur && cur.h===handFor(id,s) && cur.a===S.accent)) ? 'clear' : 'set'; }
 // Mouse: press applies at once and drag paints. Touch/pen: only a clean tap applies, so swiping scrolls without editing.
@@ -688,16 +710,26 @@ let NX=[];
 const yOf = pos => 92 - pos*5;
 function renderNotation(){
   const bars=NB(), grid=G();
-  const barW=16*SW+PADB*2, W=LEAD+bars*barW+8, H=148;
+  const barW=16*SW+PADB*2, W=LEAD+bars*barW+8, TOP=isBoth()?16:0, H=148+TOP;
   NX=[];
   let o=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="תווים">`;
+  if(TOP){
+    o+=`<text x="${LEAD+4}" y="13" font-family="Rubik,sans-serif" font-weight="700" font-size="12.5" fill="#8a6a10">${grooveLabel()}</text>`;
+    for(let b=1;b<bars;b++) o+=`<text x="${LEAD+b*barW+8}" y="13" font-family="Rubik,sans-serif" font-weight="700" font-size="12.5" fill="#1b1e26">${S.bars>1?'מעבר '+b:'מעבר'}</text>`;
+  }
+  o+=`<g transform="translate(0,${TOP})">`;
   o+=`<rect id="nph" x="0" y="8" width="${SW}" height="118" rx="4" fill="#dcab4a" opacity=".28" style="display:none"/>`;
   for(let k=0;k<5;k++){ const y=52+k*10; o+=`<line x1="6" x2="${W-6}" y1="${y}" y2="${y}" stroke="#1b1e26" stroke-width="1"/>`; }
   o+=`<rect x="12" y="62" width="3.5" height="20" fill="#1b1e26"/><rect x="19" y="62" width="3.5" height="20" fill="#1b1e26"/>`;
   o+=`<text x="36" y="71" font-family="Georgia,serif" font-weight="700" font-size="21" text-anchor="middle" fill="#1b1e26">4</text><text x="36" y="91" font-family="Georgia,serif" font-weight="700" font-size="21" text-anchor="middle" fill="#1b1e26">4</text>`;
   for(let b=0;b<bars;b++){
     const bx=LEAD+b*barW, xEnd=bx+barW;
-    if(b<bars-1) o+=`<line x1="${xEnd}" x2="${xEnd}" y1="52" y2="92" stroke="#1b1e26"/>`;
+    if(isBoth() && b===0){
+      o+=`<rect x="${bx}" y="46" width="${barW}" height="52" fill="#dcab4a" opacity=".10"/>`;
+      o+=`<rect x="${bx+3}" y="52" width="4" height="40" fill="#1b1e26"/><line x1="${bx+10}" x2="${bx+10}" y1="52" y2="92" stroke="#1b1e26"/><circle cx="${bx+15}" cy="67" r="2" fill="#1b1e26"/><circle cx="${bx+15}" cy="77" r="2" fill="#1b1e26"/>`;
+      o+=`<circle cx="${xEnd-11}" cy="67" r="2" fill="#1b1e26"/><circle cx="${xEnd-11}" cy="77" r="2" fill="#1b1e26"/><line x1="${xEnd-6}" x2="${xEnd-6}" y1="52" y2="92" stroke="#1b1e26"/><rect x="${xEnd-3}" y="52" width="4" height="40" fill="#1b1e26"/>`;
+    }
+    else if(b<bars-1) o+=`<line x1="${xEnd}" x2="${xEnd}" y1="52" y2="92" stroke="#1b1e26"/>`;
     else o+=`<circle cx="${xEnd-11}" cy="67" r="2" fill="#1b1e26"/><circle cx="${xEnd-11}" cy="77" r="2" fill="#1b1e26"/><line x1="${xEnd-6}" x2="${xEnd-6}" y1="52" y2="92" stroke="#1b1e26"/><rect x="${xEnd-3}" y="52" width="4" height="40" fill="#1b1e26"/>`;
     for(let beat=0;beat<4;beat++){
       const base=b*16+beat*4;
@@ -742,7 +774,7 @@ function renderNotation(){
       }
     }
   }
-  o+='</svg>';
+  o+='</g></svg>';
   $('#notation').innerHTML=o;
   if(lastPh!==null){ const m=document.getElementById('nph'); if(m && NX[lastPh]!=null){ m.setAttribute('x', NX[lastPh]-SW/2); m.style.display=''; } }
 }
@@ -765,16 +797,18 @@ function renderStats(){
     }
     lines.push(str);
   }
-  $('#stickLine').innerHTML = lines.map((l,i)=>`<span><em>${bars>1?`${i+1}| `:''}</em>${l}</span>`).join('');
+  const lab = i => isBoth() ? (i===0 ? (S.grooveBars?`ביט x${S.grooveBars} | `:'ביט | ') : (S.bars>1?`מעבר ${i} | `:'מעבר | ')) : (bars>1?`${i+1}| `:'');
+  $('#stickLine').innerHTML = lines.map((l,i)=>`<span><em>${lab(i)}</em>${l}</span>`).join('');
   $('#stats').innerHTML = `<span>ימין <b class="R">${R}</b></span><span>שמאל <b class="L">${L}</b></span><span>בס <b>${K}</b></span><span>מכות <b>${notes}</b></span>`
     + (maxRun>=2?`<span>רצף ארוך באותה יד: <b>${maxRun}× ${runH}</b></span>`:'')
     + `<span>צפיפות: <b>${Math.round(notes/n*100)}%</b></span>`;
 }
-function changed(){ if(S.edit==='groove') S.grooveIdx=null; else S.fillIdx=null; renderSkip(); renderNotation(); renderStats(); persist(); }
+function changed(src=S.edit){ if(src==='groove') S.grooveIdx=null; else if(src==='fill') S.fillIdx=null; renderSkip(); renderNotation(); renderStats(); persist(); }
 function fullRender(){ renderGrid(); renderNotation(); renderStats(); syncUI(); persist(); }
 
 /* ---------- edit mode ---------- */
 function setEdit(m){ S.edit=m; fullRender(); wrap.scrollLeft=0; }
+$('#tabBoth').onclick=()=>setEdit('both');
 $('#tabFill').onclick=()=>setEdit('fill');
 $('#tabGroove').onclick=()=>setEdit('groove');
 
@@ -782,7 +816,7 @@ $('#tabGroove').onclick=()=>setEdit('groove');
 $('#brush').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; S.brush=b.dataset.b; syncUI(); persist(); });
 $('#accBtn').onclick=()=>{ S.accent=!S.accent; syncUI(); persist(); };
 $('#barsSel').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; S.bars=+b.dataset.n; if(playing) stop(); fullRender(); });
-$('#mirrorBtn').onclick=()=>{ const g=G(); for(const i of INST) g[i.id]=g[i.id].map(c=>c&&c.h!=='K'?{...c,h:c.h==='R'?'L':'R'}:c); fullRender(); };
+$('#mirrorBtn').onclick=()=>{ const g=G(); for(const i of INST) g[i.id].forEach(c=>{ if(c&&c.h!=='K') c.h = c.h==='R'?'L':'R'; }); fullRender(); };
 $('#altBtn').onclick=()=>{ const g=G(); let h='R'; for(let s=0;s<NB()*16;s++){ const hand=INST.filter(i=>i.id!=='kick' && g[i.id][s]); if(!hand.length) continue; if(hand.length===1){ g[hand[0].id][s].h=h; h=h==='R'?'L':'R'; } else { g[hand[0].id][s].h='R'; g[hand[1].id][s].h='L'; hand.slice(2).forEach(x=>g[x.id][s].h='R'); } } fullRender(); };
 $('#copyBtn').onclick=()=>{ for(const i of INST) for(let b=1;b<S.bars;b++) for(let s=0;s<16;s++) S.grid[i.id][b*16+s]=S.grid[i.id][s]?{...S.grid[i.id][s]}:null; fullRender(); };
 let clearArm=null;
@@ -790,7 +824,7 @@ $('#clearBtn').onclick=e=>{
   const btn=e.currentTarget;
   if(!clearArm){ btn.textContent='לנקות הכול?'; clearArm=setTimeout(()=>{ btn.textContent='נקה'; clearArm=null; },3000); return; }
   clearTimeout(clearArm); clearArm=null; btn.textContent='נקה';
-  if(S.edit==='groove') S.groove=emptyGrid(); else S.grid=emptyGrid();
+  if(S.edit!=='fill') S.groove=emptyGrid(); if(S.edit!=='groove') S.grid=emptyGrid();
   fullRender();
 };
 
@@ -809,10 +843,11 @@ function syncUI(){
   $('#accBtn').classList.toggle('on',S.accent); $('#accBtn').setAttribute('aria-pressed',S.accent);
   document.querySelectorAll('#barsSel button').forEach(b=>b.classList.toggle('on', +b.dataset.n===S.bars));
   const gr=S.edit==='groove';
-  $('#tabFill').classList.toggle('on',!gr); $('#tabGroove').classList.toggle('on',gr);
-  $('#tabFill').setAttribute('aria-selected',!gr); $('#tabGroove').setAttribute('aria-selected',gr);
+  for(const [id,m] of [['#tabBoth','both'],['#tabFill','fill'],['#tabGroove','groove']]){ $(id).classList.toggle('on',S.edit===m); $(id).setAttribute('aria-selected',S.edit===m); }
   $('#barsBox').hidden=gr; $('#copyBtn').hidden=gr || S.bars<2;
-  $('#modeNote').textContent = gr
+  $('#modeNote').textContent = isBoth()
+    ? `הביט הראשי (מסומן ברקע זהוב) ואחריו המעבר. ${S.grooveBars?'הביט חוזר '+S.grooveBars+' פעמים לפני המעבר':'הביט לא מתנגן; אפשר לבחור תיבות ביט במבנה הסבב'}. עורכים את שניהם כאן.`
+    : gr
     ? `עורכים את הביט הראשי (תיבה אחת). הוא מתנגן ${S.grooveBars?S.grooveBars+' פעמים לפני המעבר':'רק אם בוחרים תיבות ביט במבנה הסבב'}.`
     : `עורכים את המעבר (${S.bars} ${S.bars>1?'תיבות':'תיבה'}). הוא מתנגן אחרי ${S.grooveBars?S.grooveBars+' תיבות ביט':'בלי ביט לפניו'}.`;
   $('#grooveBars').value=S.grooveBars; $('#land').checked=S.land;
@@ -821,14 +856,14 @@ function syncUI(){
   $('#trOn').checked=S.trOn; $('#trInc').value=S.trInc; $('#trEvery').value=S.trEvery; $('#trMax').value=S.trMax;
   const fb=$('#followBtn'); fb.classList.toggle('on',S.follow); fb.setAttribute('aria-pressed',S.follow);
 }
-$('#grooveBars').addEventListener('change', syncUI);
+$('#grooveBars').addEventListener('change', ()=>{ syncUI(); if(isBoth()){ renderGrid(); renderNotation(); renderStats(); } });
 
 /* ---------- library ---------- */
 let libTab='fills', libLv=0;
 function copyGrid(src){ const g=emptyGrid(); for(const i of INST) if(src[i.id]) src[i.id].forEach((c,s)=>{ if(s<MAXSTEPS) g[i.id][s]=c?{...c}:null; }); return g; }
 function afterLoad(){ fullRender(); wrap.scrollLeft=0; $('#editor').scrollIntoView({behavior:'smooth', block:'start'}); }
-function loadFill(f, stay){ S.grid=buildFill(f); S.bars=f.bars; S.edit='fill'; S.fillIdx=FILLS.indexOf(f); if(stay){ fullRender(); wrap.scrollLeft=0; } else afterLoad(); }
-function loadGroove(g, stay){ S.groove=gridFromSeq(g.seq); S.edit='groove'; S.grooveIdx=GROOVES.indexOf(g); if(stay){ fullRender(); wrap.scrollLeft=0; } else afterLoad(); }
+function loadFill(f, stay){ S.grid=buildFill(f); S.bars=f.bars; if(S.edit!=='both') S.edit='fill'; S.fillIdx=FILLS.indexOf(f); if(stay){ fullRender(); wrap.scrollLeft=0; } else afterLoad(); }
+function loadGroove(g, stay){ S.groove=gridFromSeq(g.seq); if(S.edit!=='both') S.edit='groove'; S.grooveIdx=GROOVES.indexOf(g); if(stay){ fullRender(); wrap.scrollLeft=0; } else afterLoad(); }
 // Skip bar: steps through the fill list (respecting the level filter) or the groove list, without stopping playback.
 function skipList(){ return S.edit==='groove' ? GROOVES : FILLS.filter(f=>!libLv||f.l===libLv); }
 function skip(dir){
@@ -861,7 +896,7 @@ function renderLib(){
   } else if(libTab==='grooves'){
     html = GROOVES.map((g,k)=>`<button class="fillcard" data-groove="${k}"><span class="t">${g.n}</span><span class="st">${stickPreview(g.seq)}</span></button>`).join('');
   } else {
-    html = saved.length ? saved.map((p,k)=>`<div class="fillcard" data-saved="${k}" role="button" tabindex="0"><span class="row2"><span class="t">${escapeHtml(p.name)}</span><button class="chip" data-del="${k}" style="padding:3px 10px;font-size:12px">מחק</button></span><span class="meta">${p.type==='groove'?'ביט ראשי':'מעבר · '+p.bars+' '+(p.bars>1?'תיבות':'תיבה')} · ${p.bpm} BPM</span></div>`).join('')
+    html = saved.length ? saved.map((p,k)=>`<div class="fillcard" data-saved="${k}" role="button" tabindex="0"><span class="row2"><span class="t">${escapeHtml(p.name)}</span><button class="chip" data-del="${k}" style="padding:3px 10px;font-size:12px">מחק</button></span><span class="meta">${p.type==='groove'?'ביט ראשי':p.type==='both'?'ביט + מעבר':'מעבר · '+p.bars+' '+(p.bars>1?'תיבות':'תיבה')} · ${p.bpm} BPM</span></div>`).join('')
       : '<p class="hint libsec" style="margin:0">עוד אין כאן כלום. ערכו מעבר או ביט, תנו לו שם ושמרו.</p>';
   }
   $('#libGrid').innerHTML=html;
@@ -877,15 +912,21 @@ $('#libGrid').addEventListener('click', e=>{
   const f=e.target.closest('[data-fill]'); if(f){ loadFill(FILLS[+f.dataset.fill]); return; }
   const g=e.target.closest('[data-groove]'); if(g){ loadGroove(GROOVES[+g.dataset.groove]); return; }
   const s=e.target.closest('[data-saved]'); if(s){ const it=saved[+s.dataset.saved];
-    if(it.type==='groove'){ S.groove=copyGrid(it.grid); S.edit='groove'; } else { S.grid=copyGrid(it.grid); S.bars=it.bars; S.edit='fill'; }
+    if(it.type==='both'){ S.groove=copyGrid(it.groove); S.grid=copyGrid(it.grid); S.bars=it.bars; S.edit='both'; }
+    else if(it.type==='groove'){ S.groove=copyGrid(it.grid); if(S.edit!=='both') S.edit='groove'; } else { S.grid=copyGrid(it.grid); S.bars=it.bars; if(S.edit!=='both') S.edit='fill'; }
     setBpm(it.bpm); afterLoad(); }
 });
 $('#libGrid').addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.matches('[data-saved]')) e.target.click(); });
 $('#saveBtn').onclick=()=>{
   const inp=$('#saveName'); const gr=S.edit==='groove';
-  const name=inp.value.trim() || `${gr?'ביט':'מעבר'} ${saved.length+1}`;
+  const name=inp.value.trim() || `${isBoth()?'ביט + מעבר':gr?'ביט':'מעבר'} ${saved.length+1}`;
+  if(isBoth()){
+    const grid={}, groove={}; for(const i of INST){ grid[i.id]=S.grid[i.id].slice(0,S.bars*16); groove[i.id]=S.groove[i.id].slice(0,16); }
+    saved.unshift({name, type:'both', bars:S.bars, bpm:S.bpm, grid, groove});
+  } else {
   const src=G(), n=NB()*16, grid={}; for(const i of INST) grid[i.id]=src[i.id].slice(0,n);
-  saved.unshift({name, type:gr?'groove':'fill', bars:NB(), bpm:S.bpm, grid}); store.set('dft.saved',saved); inp.value=''; renderLib();
+  saved.unshift({name, type:gr?'groove':'fill', bars:NB(), bpm:S.bpm, grid});
+  } store.set('dft.saved',saved); inp.value=''; renderLib();
   const b=$('#saveBtn'); const t=b.textContent; b.textContent='נשמר ✓'; setTimeout(()=>b.textContent=t,1500);
 };
 
@@ -905,5 +946,4 @@ syncUI(); renderGrid(); renderNotation(); renderStats(); renderLib();
 })();
 </script>
 
-</body>
-</html>
+</body></html>
