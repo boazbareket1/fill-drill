@@ -77,6 +77,10 @@ input[type=range]{accent-color:var(--brass);width:140px}
 .act{border:1px solid var(--line);background:transparent;color:var(--text);font:inherit;font-size:14px;border-radius:10px;padding:8px 12px;cursor:pointer}
 .act:hover{background:var(--panel2)}
 .act.warn{border-color:var(--warn);color:var(--warn)}
+.act.share{border-color:var(--brass);color:var(--brass);display:inline-flex;align-items:center;gap:6px}
+.act.share svg{width:15px;height:15px}
+.toast{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(20px);background:var(--brass);color:var(--brass-ink);font-weight:600;padding:10px 16px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;transition:opacity .25s,transform .25s;z-index:50;max-width:92vw;text-align:center;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* grid */
 .gridwrap{overflow-x:auto;direction:ltr;padding-bottom:6px}
@@ -267,6 +271,7 @@ kbd{font-family:"JetBrains Mono",monospace;background:var(--panel2);border:1px s
         <button class="act" id="altBtn" title="מסדר סטיקינג R L R L לפי סדר המכות">סטיקינג לסירוגין</button>
         <button class="act" id="copyBtn">שכפל תיבה 1</button>
         <button class="act warn" id="clearBtn">נקה</button>
+        <button class="act share" id="shareBtn" title="קישור שפותח את המקצב הזה אצל מי שמקבל אותו"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>שתף מקצב</button>
       </div>
     </div>
     <div class="gridwrap" id="gridwrap" style="margin-top:12px"><div class="grid" id="grid"></div></div>
@@ -813,7 +818,7 @@ function renderStats(){
     + (maxRun>=2?`<span>רצף ארוך באותה יד: <b>${maxRun}× ${runH}</b></span>`:'')
     + `<span>צפיפות: <b>${Math.round(notes/n*100)}%</b></span>`;
 }
-function changed(src=S.edit){ if(src==='groove') S.grooveIdx=null; else if(src==='fill') S.fillIdx=null; renderSkip(); renderNotation(); renderStats(); persist(); }
+function changed(src=S.edit){ if(src==='groove') S.grooveIdx=null; else if(src==='fill') S.fillIdx=null; S.sharedName=null; renderSkip(); renderNotation(); renderStats(); persist(); }
 function fullRender(){ renderGrid(); renderNotation(); renderStats(); syncUI(); persist(); }
 
 /* ---------- edit mode ---------- */
@@ -888,7 +893,7 @@ function renderSkip(){
   const gr=S.edit==='groove';
   const cur = gr ? GROOVES[S.grooveIdx] : FILLS[S.fillIdx];
   $('#skipKind').textContent = gr ? 'ביט ראשי' : (libLv ? 'מעבר · '+LEVELS[libLv] : 'מעבר');
-  $('#skipName').textContent = cur ? cur.n : (gr ? 'ביט שערכת' : 'מעבר שערכת');
+  $('#skipName').textContent = cur ? cur.n : (S.sharedName ? S.sharedName : (gr ? 'ביט שערכת' : 'מעבר שערכת'));
 }
 $('#skipPrev').onclick=()=>skip(1*-1);
 $('#skipNext').onclick=()=>skip(1);
@@ -906,7 +911,7 @@ function renderLib(){
   } else if(libTab==='grooves'){
     html = GROOVES.map((g,k)=>`<button class="fillcard" data-groove="${k}"><span class="t">${g.n}</span><span class="st">${stickPreview(g.seq)}</span></button>`).join('');
   } else {
-    html = saved.length ? saved.map((p,k)=>`<div class="fillcard" data-saved="${k}" role="button" tabindex="0"><span class="row2"><span class="t">${escapeHtml(p.name)}</span><button class="chip" data-del="${k}" style="padding:3px 10px;font-size:12px">מחק</button></span><span class="meta">${p.type==='groove'?'ביט ראשי':p.type==='both'?'ביט + מעבר':'מעבר · '+p.bars+' '+(p.bars>1?'תיבות':'תיבה')} · ${p.bpm} BPM</span></div>`).join('')
+    html = saved.length ? saved.map((p,k)=>`<div class="fillcard" data-saved="${k}" role="button" tabindex="0"><span class="row2"><span class="t">${escapeHtml(p.name)}</span><span style="display:flex;gap:4px"><button class="chip" data-share="${k}" style="padding:3px 10px;font-size:12px">שתף</button><button class="chip" data-del="${k}" style="padding:3px 10px;font-size:12px">מחק</button></span></span><span class="meta">${p.type==='groove'?'ביט ראשי':p.type==='both'?'ביט + מעבר':'מעבר · '+p.bars+' '+(p.bars>1?'תיבות':'תיבה')} · ${p.bpm} BPM</span></div>`).join('')
       : '<p class="hint libsec" style="margin:0">עוד אין כאן כלום. ערכו מעבר או ביט, תנו לו שם ושמרו.</p>';
   }
   $('#libGrid').innerHTML=html;
@@ -915,6 +920,8 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<
 $('#libTabs').addEventListener('click', e=>{ const c=e.target.closest('[data-tab]'); if(!c) return; libTab=c.dataset.tab; renderLib(); });
 $('#levelChips').addEventListener('click', e=>{ const c=e.target.closest('[data-lv]'); if(!c) return; libLv=+c.dataset.lv; renderLib(); renderSkip(); });
 $('#libGrid').addEventListener('click', e=>{
+  const sh=e.target.closest('[data-share]');
+  if(sh){ e.stopPropagation(); const it=saved[+sh.dataset.share]; sharePayload(payloadFromSaved(it)); return; }
   const del=e.target.closest('[data-del]');
   if(del){ e.stopPropagation();
     if(!del.classList.contains('sure')){ del.classList.add('sure'); del.textContent='בטוח?'; del.style.background='var(--warn)'; setTimeout(()=>{ if(del.isConnected){ del.classList.remove('sure'); del.textContent='מחק'; del.style.background=''; } },3000); return; }
@@ -939,6 +946,65 @@ $('#saveBtn').onclick=()=>{
   } store.set('dft.saved',saved); inp.value=''; renderLib();
   const b=$('#saveBtn'); const t=b.textContent; b.textContent='נשמר ✓'; setTimeout(()=>b.textContent=t,1500);
 };
+
+/* ---------- share (link carries the whole pattern in the URL hash, no server) ---------- */
+const LET = Object.fromEntries(Object.entries(CODE).map(([k,v])=>[v,k]));
+function seqFromGrid(grid, n){
+  const out=[];
+  for(let s=0;s<n;s++){
+    const toks=[]; for(const i of INST){ const c=grid[i.id] && grid[i.id][s]; if(c) toks.push((c.a?'>':'')+LET[i.id]+(c.h==='K'?'':c.h)); }
+    out.push(toks.length?toks.join('+'):'-');
+  }
+  return out.join(' ');
+}
+const b64u = {
+  enc(str){ const b=new TextEncoder().encode(str); let bin=''; b.forEach(x=>bin+=String.fromCharCode(x)); return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); },
+  dec(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; const bin=atob(s); return new TextDecoder().decode(Uint8Array.from(bin, c=>c.charCodeAt(0))); }
+};
+function payloadFromState(){
+  const name=$('#saveName').value.trim() || (S.sharedName||'') || (S.edit!=='groove' && FILLS[S.fillIdx] ? FILLS[S.fillIdx].n : '');
+  return {v:1, n:name, bpm:S.bpm, bars:S.bars, gb:S.grooveBars, g:seqFromGrid(S.groove,16), f:seqFromGrid(S.grid,S.bars*16)};
+}
+function payloadFromSaved(it){
+  const p={v:1, n:it.name, bpm:it.bpm, bars:1, gb:S.grooveBars, g:seqFromGrid(S.groove,16), f:''};
+  if(it.type==='both'){ p.bars=it.bars; p.g=seqFromGrid(it.groove,16); p.f=seqFromGrid(it.grid,it.bars*16); }
+  else if(it.type==='groove'){ p.g=seqFromGrid(it.grid,16); p.bars=S.bars; p.f=seqFromGrid(S.grid,S.bars*16); }
+  else { p.bars=it.bars; p.f=seqFromGrid(it.grid,it.bars*16); }
+  return p;
+}
+function shareUrl(p){ return location.origin+location.pathname+'#p='+b64u.enc(JSON.stringify(p)); }
+let toastT;
+function toast(msg){
+  let el=$('#toast'); if(!el){ el=document.createElement('div'); el.id='toast'; el.className='toast'; el.setAttribute('role','status'); document.body.appendChild(el); }
+  el.textContent=msg; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2600);
+}
+async function sharePayload(p){
+  const url=shareUrl(p);
+  const title = p.n ? `${p.n} · ${p.bpm} BPM` : `מקצב · ${p.bpm} BPM`;
+  const text = `מקצב מ־Fill Drill: ${title}`;
+  if(navigator.share){
+    try{ await navigator.share({title:'Fill Drill – '+title, text, url}); return; }
+    catch(e){ if(e && e.name==='AbortError') return; }
+  }
+  try{ await navigator.clipboard.writeText(url); toast('הקישור למקצב הועתק ✓'); }
+  catch(e){ window.prompt('העתיקו את הקישור:', url); }
+}
+$('#shareBtn').onclick=()=>sharePayload(payloadFromState());
+(function loadShared(){
+  const m=location.hash.match(/[#&]p=([A-Za-z0-9_-]+)/); if(!m) return;
+  try{
+    const p=JSON.parse(b64u.dec(m[1]));
+    if(!p || p.v!==1) throw 0;
+    const bars=[1,2,4].includes(+p.bars)?+p.bars:1;
+    S.groove=gridFromSeq(p.g||''); S.grid=gridFromSeq(p.f||''); S.bars=bars;
+    S.bpm=Math.max(30,Math.min(240,+p.bpm||70)); if([0,1,3,7].includes(+p.gb)) S.grooveBars=+p.gb;
+    S.edit='both'; S.fillIdx=null; S.grooveIdx=null; S.sharedName=String(p.n||'').slice(0,40);
+    history.replaceState(null,'',location.pathname+location.search);
+    fullRender(); wrap.scrollLeft=0;
+    $('#saveName').value=S.sharedName;
+    setTimeout(()=>toast(S.sharedName?`נטען מקצב ששותף איתך: ${S.sharedName}`:'נטען מקצב ששותף איתך'), 300);
+  }catch(e){ console.warn('bad share link', e); setTimeout(()=>toast('הקישור למקצב לא תקין'),300); }
+})();
 
 /* ---------- keyboard ---------- */
 document.addEventListener('keydown', e=>{
